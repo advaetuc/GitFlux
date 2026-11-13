@@ -23,7 +23,7 @@ export default tseslint.config(
     files: ["src/**/*.ts", "src/**/*.tsx", "test/**/*.ts"],
     languageOptions: {
       parserOptions: {
-        project: ["tsconfig.json", "tsconfig.webview.json"],
+        project: ["tsconfig.json", "tsconfig.webview.json", "tsconfig.integration.json"],
         tsconfigRootDir: import.meta.dirname,
       },
     },
