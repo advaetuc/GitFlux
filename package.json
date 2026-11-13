@@ -1,0 +1,158 @@
+{
+  "name": "dev-extension",
+  "displayName": "Dev Display Name",
+  "description": "Stage selected files and commit them with a custom author and committer date.",
+  "version": "0.1.0",
+  "publisher": "dev-publisher",
+  "license": "UNLICENSED",
+  "engines": {
+    "vscode": "^1.90.0"
+  },
+  "categories": [
+    "SCM Providers"
+  ],
+  "extensionKind": [
+    "workspace"
+  ],
+  "extensionDependencies": [
+    "vscode.git"
+  ],
+  "main": "./dist/extension.js",
+  "activationEvents": [],
+  "capabilities": {
+    "virtualWorkspaces": {
+      "supported": false,
+      "description": "Requires a real working tree on disk."
+    },
+    "untrustedWorkspaces": {
+      "supported": false,
+      "description": "Running git executes repository hooks and repository-defined configuration."
+    }
+  },
+  "scripts": {
+    "build": "node esbuild.mjs",
+    "watch": "node esbuild.mjs --watch",
+    "lint": "eslint src test --max-warnings 0",
+    "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.webview.json --noEmit",
+    "test": "vitest run",
+    "test:shell": "vitest run --dir test/shell-matrix",
+    "test:integration": "vscode-test",
+    "package": "vsce package"
+  },
+  "contributes": {
+    "commands": [
+      {
+        "command": "dev-extension.open",
+        "title": "Commit With Custom Date…",
+        "category": "Git"
+      },
+      {
+        "command": "dev-extension.openForSelection",
+        "title": "Commit With Custom Date…",
+        "category": "Git"
+      }
+    ],
+    "views": {
+      "scm": [
+        {
+          "type": "webview",
+          "id": "dev-extension.panel",
+          "name": "Commit With Custom Date",
+          "when": "workspaceFolderCount > 0",
+          "visibility": "collapsed"
+        }
+      ]
+    },
+    "menus": {
+      "commandPalette": [
+        {
+          "command": "dev-extension.open",
+          "when": "workspaceFolderCount > 0"
+        },
+        {
+          "command": "dev-extension.openForSelection",
+          "when": "false"
+        }
+      ],
+      "explorer/context": [
+        {
+          "command": "dev-extension.openForSelection",
+          "when": "workspaceFolderCount > 0 && !explorerResourceIsRoot",
+          "group": "7_modification@100"
+        }
+      ],
+      "scm/resourceState/context": [
+        {
+          "command": "dev-extension.openForSelection",
+          "when": "scmProvider == git",
+          "group": "1_modification@99"
+        }
+      ],
+      "scm/resourceFolder/context": [
+        {
+          "command": "dev-extension.openForSelection",
+          "when": "scmProvider == git",
+          "group": "1_modification@99"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "Commit With Custom Date",
+      "properties": {
+        "dev-extension.shell": {
+          "type": "string",
+          "enum": [
+            "auto",
+            "bash",
+            "zsh",
+            "sh",
+            "fish",
+            "pwsh",
+            "powershell",
+            "cmd"
+          ],
+          "default": "auto",
+          "markdownDescription": "Shell dialect used for the Copy and Send to Terminal commands. `auto` follows the default terminal profile."
+        },
+        "dev-extension.workingHours.start": {
+          "type": "string",
+          "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$",
+          "default": "09:30",
+          "markdownDescription": "Start of the window used by **Random time in working hours** (24-hour `HH:MM`)."
+        },
+        "dev-extension.workingHours.end": {
+          "type": "string",
+          "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$",
+          "default": "18:30",
+          "markdownDescription": "End of the window used by **Random time in working hours** (24-hour `HH:MM`)."
+        },
+        "dev-extension.push.defaultEnabled": {
+          "type": "boolean",
+          "default": false,
+          "markdownDescription": "Whether the **Push after commit** option starts checked."
+        },
+        "dev-extension.terminal.autoRun": {
+          "type": "boolean",
+          "default": false,
+          "scope": "application",
+          "markdownDescription": "Press Enter automatically after **Send to Terminal**. Application-scoped so a repository's `.vscode/settings.json` cannot enable it."
+        }
+      }
+    }
+  },
+  "devDependencies": {
+    "typescript": "5.6.3",
+    "esbuild": "0.24.0",
+    "vitest": "2.1.3",
+    "fast-check": "3.22.0",
+    "eslint": "9.12.0",
+    "typescript-eslint": "8.9.0",
+    "@types/vscode": "1.90.0",
+    "@types/node": "20.17.6",
+    "@vscode/test-cli": "0.0.10",
+    "@vscode/test-electron": "2.4.1",
+    "@vscode/vsce": "3.1.1",
+    "preact": "10.24.3",
+    "@vscode/codicons": "0.0.36"
+  }
+}
