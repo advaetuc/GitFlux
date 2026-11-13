@@ -110,6 +110,9 @@ describe("Phase 3 Gate Verifications", () => {
     if (!planRes.ok) return;
 
     const effective = resolveEffectiveShell(sampleDraft.shell, sampleEnv.shellSetting, sampleEnv.detectedShell);
+    expect(effective).not.toBe("none");
+    if (effective === "none") return;
+
     const renderRes = renderShell(planRes.value, effective, {
       includeRepoDir: sampleEnv.includeRepoDirInCopy,
     });

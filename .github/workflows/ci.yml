@@ -85,7 +85,7 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run build
-      - run: npx vsce package --no-git-tag-version
+      - run: npm run package
       - uses: actions/upload-artifact@v4
         with:
           name: vsix-package

@@ -37,7 +37,7 @@
     "test": "vitest run",
     "test:shell": "vitest run --dir test/shell-matrix",
     "test:integration": "vscode-test",
-    "package": "vsce package"
+    "package": "vsce package --allow-missing-repository --no-git-tag-version"
   },
   "contributes": {
     "commands": [
