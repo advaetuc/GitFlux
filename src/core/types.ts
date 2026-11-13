@@ -160,3 +160,11 @@ export type HeadState =
   | { readonly kind: "unborn"; readonly branch: string };
 
 export type Blocker = "MERGE" | "REBASE" | "CHERRY_PICK" | "REVERT" | "UNMERGED_FILES";
+
+export type ErrorCode =
+  | "MALFORMED_REQUEST" | "STALE_SELECTION" | "BLOCKED" | "GIT_TOO_OLD"
+  | "PATH_REJECTED" | "MESSAGE_REJECTED" | "DATE_REJECTED"
+  | "UNSAFE_CHARACTER" | "COMMAND_TOO_LONG" | "UNSUPPORTED_SHELL"
+  | "NOTHING_TO_COMMIT" | "IDENTITY_MISSING" | "INDEX_LOCKED"
+  | "HOOK_REJECTED" | "SIGNING_FAILED" | "GIT_FAILED"
+  | "PUSH_REJECTED" | "AUTH_FAILED" | "NETWORK" | "CANCELLED" | "TIMEOUT" | "INTERNAL";

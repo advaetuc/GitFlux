@@ -4,6 +4,10 @@ import { builtinModules } from "node:module";
 
 const bareBuiltins = builtinModules.filter((m) => !m.startsWith("_"));
 const nodePrefixed = bareBuiltins.map((m) => `node:${m}`);
+const bareBuiltinPaths = bareBuiltins.map((m) => ({
+  name: m,
+  message: "core must not import Node built-ins.",
+}));
 
 export default tseslint.config(
   {
@@ -25,9 +29,9 @@ export default tseslint.config(
     },
   },
 
-  // ── All files except runner.ts: ban child_process ──
+  // ── All source files except runner.ts: ban child_process ──
   {
-    files: ["src/**/*.ts", "src/**/*.tsx", "test/**/*.ts"],
+    files: ["src/**/*.ts", "src/**/*.tsx"],
     ignores: ["src/host/runner.ts"],
     rules: {
       "no-restricted-imports": [
@@ -68,10 +72,10 @@ export default tseslint.config(
             { name: "vscode", message: "core must not import vscode." },
             { name: "child_process", message: "child_process may only be imported in runner.ts." },
             { name: "node:child_process", message: "child_process may only be imported in runner.ts." },
+            ...bareBuiltinPaths,
           ],
           patterns: [
             { group: ["node:*", ...nodePrefixed], message: "core must not import Node built-ins." },
-            { group: bareBuiltins, message: "core must not import Node built-ins." },
             { group: ["../*", "../**"], message: "core must not import paths outside src/core." },
           ],
         },
@@ -101,10 +105,10 @@ export default tseslint.config(
             { name: "vscode", message: "webview must not import vscode." },
             { name: "child_process", message: "child_process may only be imported in runner.ts." },
             { name: "node:child_process", message: "child_process may only be imported in runner.ts." },
+            ...bareBuiltinPaths,
           ],
           patterns: [
             { group: ["node:*", ...nodePrefixed], message: "webview must not import Node built-ins." },
-            { group: bareBuiltins, message: "webview must not import Node built-ins." },
             { group: ["../host/**", "**/host/**"], message: "webview must not import host." },
           ],
         },

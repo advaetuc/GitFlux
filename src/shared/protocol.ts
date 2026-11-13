@@ -1,7 +1,7 @@
 // src/shared/protocol.ts — §7.2 + AM-02 + AM-05
-import type { DetectedShell, LocalDateTime, ShellSetting } from "../core/types";
+import type { DetectedShell, ErrorCode, LocalDateTime, ShellSetting } from "../core/types";
 // AM-02: re-export shared snapshot types from core
-export type { ChangedFile, FileChangeKind, HeadState, Blocker } from "../core/types";
+export type { ChangedFile, FileChangeKind, HeadState, Blocker, ErrorCode } from "../core/types";
 
 export const PROTOCOL_VERSION = 1;
 
@@ -63,13 +63,7 @@ export interface CommitDraft {
 
 export type RunStepId = "preflight" | "add" | "commit" | "verify" | "push";
 
-export type ErrorCode =
-  | "MALFORMED_REQUEST" | "STALE_SELECTION" | "BLOCKED" | "GIT_TOO_OLD"
-  | "PATH_REJECTED" | "MESSAGE_REJECTED" | "DATE_REJECTED"
-  | "UNSAFE_CHARACTER" | "COMMAND_TOO_LONG" | "UNSUPPORTED_SHELL"
-  | "NOTHING_TO_COMMIT" | "IDENTITY_MISSING" | "INDEX_LOCKED"
-  | "HOOK_REJECTED" | "SIGNING_FAILED" | "GIT_FAILED"
-  | "PUSH_REJECTED" | "AUTH_FAILED" | "NETWORK" | "CANCELLED" | "TIMEOUT" | "INTERNAL";
+
 
 export type ActionResult =
   | { readonly ok: true; readonly action: "copy" | "sendToTerminal" }
