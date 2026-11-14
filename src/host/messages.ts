@@ -111,7 +111,8 @@ export function isWebviewToHost(raw: unknown): raw is WebviewToHost {
     }
     case "copy":
     case "sendToTerminal":
-    case "run": {
+    case "run":
+    case "amendHead": {
       if (!isStringWithMax(msg["requestId"], 64)) {
         return false;
       }

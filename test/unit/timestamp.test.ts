@@ -105,6 +105,14 @@ describe("resolveTimestamp", () => {
     expect(resolveTimestamp(dt(-1, 0, 0), 0)).toEqual({ ok: false, error: "INVALID_TIME" });
   });
 
+  it("rejects invalid month and day values", () => {
+    const base: LocalDateTime = { year: 2024, month: 6, day: 15, hour: 12, minute: 0, second: 0 };
+    expect(resolveTimestamp({ ...base, month: 0 }, 0)).toEqual({ ok: false, error: "INVALID_DATE" });
+    expect(resolveTimestamp({ ...base, month: 13 }, 0)).toEqual({ ok: false, error: "INVALID_DATE" });
+    expect(resolveTimestamp({ ...base, day: 0 }, 0)).toEqual({ ok: false, error: "INVALID_DATE" });
+    expect(resolveTimestamp({ ...base, day: 32 }, 0)).toEqual({ ok: false, error: "INVALID_DATE" });
+  });
+
   it("localOffsetMinutesAt returns offset for valid local time", () => {
     const dt: LocalDateTime = { year: 2024, month: 6, day: 15, hour: 12, minute: 0, second: 0 };
     const res = localOffsetMinutesAt(dt);
@@ -112,6 +120,22 @@ describe("resolveTimestamp", () => {
     if (res.ok) {
       expect(typeof res.value).toBe("number");
       expect(Number.isInteger(res.value)).toBe(true);
+    }
+  });
+
+  it("localOffsetMinutesAt returns DST_GAP when wall-clock hour shifted", () => {
+    const origDate = globalThis.Date;
+    try {
+      class MockDate extends origDate {
+        override getHours() {
+          return 3; // shifted
+        }
+      }
+      globalThis.Date = MockDate as unknown as typeof Date;
+      const res = localOffsetMinutesAt({ year: 2024, month: 3, day: 10, hour: 2, minute: 0, second: 0 });
+      expect(res).toEqual({ ok: false, error: "DST_GAP" });
+    } finally {
+      globalThis.Date = origDate;
     }
   });
 });

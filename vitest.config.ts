@@ -6,5 +6,13 @@ export default defineConfig({
     exclude: ["test/integration/**/*"],
     globals: false,
     testTimeout: 30_000,
+    coverage: {
+      provider: "v8",
+      include: ["src/core/**/*.ts"],
+      exclude: ["src/core/types.ts"],
+      thresholds: {
+        lines: 95,
+      },
+    },
   },
 });

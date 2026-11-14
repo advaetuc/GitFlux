@@ -9,6 +9,7 @@ import { detectBlockers, buildHeadState } from "../../src/host/repoState";
 import { runUnderMutex, buildGitEnv, classifyGitError } from "../../src/host/runner";
 import { buildCommitPlan } from "../../src/core/plan";
 import { resolveTimestamp } from "../../src/core/timestamp";
+import { EXTENSION_ID, COMMAND_OPEN, COMMAND_OPEN_FOR_SELECTION } from "../../src/host/ids";
 
 declare function suite(name: string, fn: () => void): void;
 declare function test(name: string, fn: () => void | Promise<void>): void;
@@ -26,15 +27,15 @@ suite("GitFlux Integration Tests", () => {
   }
 
   test("Extension is activated and commands are registered", async () => {
-    const ext = vscode.extensions.getExtension("dev-publisher.dev-extension");
+    const ext = vscode.extensions.getExtension(`advaetuc.${EXTENSION_ID}`);
     if (ext) {
       await ext.activate();
       assert.ok(ext.isActive);
     }
 
     const allCommands = await vscode.commands.getCommands(true);
-    assert.ok(allCommands.includes("dev-extension.open"));
-    assert.ok(allCommands.includes("dev-extension.openForSelection"));
+    assert.ok(allCommands.includes(COMMAND_OPEN));
+    assert.ok(allCommands.includes(COMMAND_OPEN_FOR_SELECTION));
   });
 
   test("Git API availability and version checking", async () => {

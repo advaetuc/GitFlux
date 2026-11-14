@@ -239,11 +239,16 @@ export function draftReducer(state: DraftState, action: DraftAction): DraftState
     }
 
     case "SNAPSHOT": {
-      if (action.snapshot.repoId !== state.activeRepoId) {
+      if (state.activeRepoId !== "" && action.snapshot.repoId !== state.activeRepoId) {
         return state;
       }
 
-      // Drop selected paths no longer present (§8.4)
+      const activeRepoId = action.snapshot.repoId;
+      const repos = state.repos.some((r) => r.repoId === activeRepoId)
+        ? state.repos
+        : [...state.repos, { repoId: activeRepoId, name: action.snapshot.name }];
+
+      // Drop selected paths no longer present (§8.4), preserving valid preselected paths
       const currentSelected = state.draft.paths;
       const availableSet = new Set(action.snapshot.files.map((f) => f.path));
       const validPaths = currentSelected.filter((p) => availableSet.has(p));
@@ -255,6 +260,7 @@ export function draftReducer(state: DraftState, action: DraftAction): DraftState
 
       const newDraft: CommitDraft = {
         ...state.draft,
+        repoId: activeRepoId,
         revision: action.snapshot.revision,
         paths: validPaths,
         push: {
@@ -266,6 +272,8 @@ export function draftReducer(state: DraftState, action: DraftAction): DraftState
       const derived = deriveDerivedState(action.snapshot, newDraft, state.env);
       return {
         ...state,
+        activeRepoId,
+        repos,
         snapshot: action.snapshot,
         draft: newDraft,
         stalePathsNotice: staleNotice,
@@ -274,11 +282,17 @@ export function draftReducer(state: DraftState, action: DraftAction): DraftState
     }
 
     case "PRESELECT": {
-      if (action.repoId !== state.activeRepoId) {
-        return state;
-      }
+      const activeRepoId = action.repoId;
+      const repoChanged = activeRepoId !== state.activeRepoId;
+      const snapshot = state.snapshot?.repoId === action.repoId ? state.snapshot : undefined;
+
+      const repos = state.repos.some((r) => r.repoId === action.repoId)
+        ? state.repos
+        : [...state.repos, { repoId: action.repoId, name: action.repoId.split("/").pop() || action.repoId }];
+
       const newDraft: CommitDraft = {
-        ...state.draft,
+        ...(repoChanged ? createDefaultDraft(action.repoId, snapshot, state.env) : state.draft),
+        repoId: action.repoId,
         paths: action.paths,
       };
       const staleNotice =
@@ -286,11 +300,15 @@ export function draftReducer(state: DraftState, action: DraftAction): DraftState
           ? `${String(action.droppedCount)} ${action.droppedCount === 1 ? "file was" : "files were"} dropped from selection (different repo or unchanged)`
           : undefined;
 
-      const derived = deriveDerivedState(state.snapshot, newDraft, state.env);
+      const derived = deriveDerivedState(snapshot, newDraft, state.env);
       return {
         ...state,
+        activeRepoId,
+        repos,
+        snapshot,
         draft: newDraft,
         stalePathsNotice: staleNotice,
+        ...(repoChanged ? { detachedHeadAcknowledged: false } : {}),
         ...derived,
       };
     }

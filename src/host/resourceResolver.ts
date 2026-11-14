@@ -2,7 +2,7 @@ import * as vscode from "vscode";
 import { statSync } from "node:fs";
 import { relative } from "node:path";
 import type { API as GitAPI, Repository } from "./vendor/git";
-import { resolveRepository } from "./gitApi";
+import { resolveRepository, normalizeFsPath } from "./gitApi";
 
 export interface ResolvedSelection {
   readonly repo: Repository | undefined;
@@ -77,8 +77,6 @@ export function extractUrisFromArgs(args: unknown[]): vscode.Uri[] {
   }
 
   return uris;
-
-  return uris;
 }
 
 /**
@@ -118,7 +116,7 @@ export function resolveSelection(
     if (!targetRepo) {
       targetRepo = repo;
       targetUris.push(uri);
-    } else if (targetRepo.rootUri.fsPath === repo.rootUri.fsPath) {
+    } else if (normalizeFsPath(targetRepo.rootUri.fsPath) === normalizeFsPath(repo.rootUri.fsPath)) {
       targetUris.push(uri);
     } else {
       // Belongs to another repository
@@ -131,10 +129,12 @@ export function resolveSelection(
   }
 
   const repoRoot = targetRepo.rootUri.fsPath;
+  const normRepoRoot = normalizeFsPath(repoRoot);
   const paths: string[] = [];
 
   for (const uri of targetUris) {
-    const rel = relative(repoRoot, uri.fsPath).replace(/\\/g, "/");
+    const normUriPath = normalizeFsPath(uri.fsPath);
+    const rel = relative(normRepoRoot, normUriPath).replace(/\\/g, "/");
     if (rel.startsWith("..") || rel.length === 0) {
       droppedCount++;
       continue;

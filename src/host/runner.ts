@@ -1,10 +1,11 @@
 import { execFile } from "node:child_process";
 import type { ExecFileOptionsWithStringEncoding } from "node:child_process";
-import type { CommitPlan } from "../core/types";
-import { buildExecPlan } from "../core/execPlan";
+import type { AmendPlan, CommitPlan } from "../core/types";
+import { buildAmendExecPlan, buildExecPlan } from "../core/execPlan";
 import type { ActionResult, ErrorCode, RunStepId } from "../shared/protocol";
 import { GitErrorCodes } from "./gitStatus";
 import type { Repository } from "./vendor/git";
+import { logDiag } from "./diag";
 
 export interface RunGitOptions {
   cwd: string;
@@ -362,6 +363,14 @@ export function executePlan(
         pushed = true;
         emit("push", "ok");
       } catch (e) {
+        if (process.env.GITFLUX_SPIKE_LOG === "1") {
+          const errObj = e as { gitErrorCode?: string; stderr?: string; message?: string };
+          logDiag("repository.push error properties", {
+            gitErrorCode: errObj.gitErrorCode,
+            stderr: errObj.stderr,
+            message: errObj.message ?? String(e),
+          });
+        }
         emit("push", "fail");
         const pushError = mapPushError(e);
         return {
@@ -388,6 +397,148 @@ export function executePlan(
       commitSha,
       verified,
       pushed,
+    };
+  });
+}
+
+/**
+ * Checks whether the current HEAD commit is already published to a remote (Blueprint §10).
+ * Returns true if HEAD is an ancestor of @{upstream} (exit 0) or if any remote branch contains HEAD.
+ */
+export async function isHeadPublished(gitPath: string, repoRoot: string): Promise<boolean> {
+  const mb = await runGit(gitPath, ["merge-base", "--is-ancestor", "HEAD", "@{upstream}"], {
+    cwd: repoRoot,
+  });
+  if (mb.ok && mb.code === 0) {
+    return true;
+  }
+
+  const br = await runGit(gitPath, ["branch", "-r", "--contains", "HEAD"], {
+    cwd: repoRoot,
+  });
+  if (br.ok && br.stdout.trim().length > 0) {
+    return true;
+  }
+
+  return false;
+}
+
+/**
+ * Executes an AmendPlan according to Blueprint §10 and §14.2 (Phase 5).
+ * Shares the exact per-repo mutex, env sanitization, index.lock retry, stderr classification, and repo.status() refresh.
+ */
+export function executeAmendPlan(
+  gitPath: string,
+  repo: Repository,
+  repoId: string,
+  plan: AmendPlan,
+  emit: StepEmitter,
+  signal?: AbortSignal,
+): Promise<ActionResult> {
+  return runUnderMutex(repoId, async () => {
+    if (signal?.aborted) {
+      return {
+        ok: false,
+        code: "CANCELLED",
+        message: "Operation cancelled.",
+        rolledBack: false,
+      };
+    }
+
+    emit("preflight", "start");
+    emit("preflight", "ok");
+
+    const exec = buildAmendExecPlan(plan);
+    const cwd = plan.repoRoot;
+
+    // Step 1: Commit (amend)
+    const commitStep = exec.steps.find((s) => s.id === "commit");
+    if (!commitStep) {
+      return { ok: false, code: "INTERNAL", message: "Missing commit step", rolledBack: false };
+    }
+
+    emit("commit", "start");
+    let commitRes = await runGit(gitPath, commitStep.argv, {
+      cwd,
+      stdin: commitStep.stdin,
+      env: commitStep.env,
+      signal,
+    });
+
+    // Retry once after 300 ms on index.lock contention (§9.1)
+    if (!commitRes.ok && /index\.lock/i.test(commitRes.stderr)) {
+      await new Promise((resolve) => setTimeout(resolve, 300));
+      commitRes = await runGit(gitPath, commitStep.argv, {
+        cwd,
+        stdin: commitStep.stdin,
+        env: commitStep.env,
+        signal,
+      });
+    }
+
+    if (!commitRes.ok) {
+      emit("commit", "fail");
+      const classification = classifyGitError(commitRes.stderr);
+      return {
+        ok: false,
+        code: classification.code,
+        step: "commit",
+        message: sanitizeStderr(commitRes.stderr || "git commit --amend failed"),
+        rolledBack: false,
+        ...(classification.fallback ? { fallback: classification.fallback } : {}),
+      };
+    }
+    emit("commit", "ok");
+
+    // Step 2: Verify
+    const verifyStep = exec.steps.find((s) => s.id === "verify");
+    let verified = false;
+    let commitSha = "";
+
+    if (verifyStep) {
+      emit("verify", "start");
+      const vRes = await runGit(gitPath, verifyStep.argv, { cwd });
+      if (vRes.ok) {
+        const parsed = parseVerifyOutput(vRes.stdout);
+        if (parsed) {
+          commitSha = parsed.sha;
+          const expectedOffsetStr =
+            (plan.timestamp.offsetMinutes >= 0 ? "+" : "-") +
+            Math.floor(Math.abs(plan.timestamp.offsetMinutes) / 60)
+              .toString()
+              .padStart(2, "0") +
+            (Math.abs(plan.timestamp.offsetMinutes) % 60).toString().padStart(2, "0");
+
+          const authorMatch =
+            parsed.author.epoch === plan.timestamp.epochSeconds &&
+            parsed.author.offset === expectedOffsetStr;
+          const committerMatch =
+            parsed.committer.epoch === plan.timestamp.epochSeconds &&
+            parsed.committer.offset === expectedOffsetStr;
+
+          verified = authorMatch && committerMatch;
+        }
+      }
+      emit("verify", verified ? "ok" : "fail");
+    }
+
+    if (!commitSha) {
+      const rev = await runGit(gitPath, ["rev-parse", "HEAD"], { cwd });
+      commitSha = rev.stdout.trim();
+    }
+
+    // Refresh repository status
+    try {
+      await repo.status();
+    } catch {
+      // ignore
+    }
+
+    return {
+      ok: true,
+      action: "amendHead",
+      commitSha,
+      verified,
     };
   });
 }

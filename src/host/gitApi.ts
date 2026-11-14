@@ -1,5 +1,8 @@
 import * as vscode from "vscode";
 import type { GitExtension, API as GitAPI, Repository } from "./vendor/git";
+import { normalizeFsPath } from "./repoState";
+
+export { normalizeFsPath };
 
 export function parseGitVersion(versionOutput: string): { major: number; minor: number; patch: number } | undefined {
   const match = /git version (\d+)\.(\d+)(?:\.(\d+))?/.exec(versionOutput);
@@ -50,15 +53,17 @@ export function resolveRepository(api: GitAPI, uri: vscode.Uri): Repository | un
     return repo;
   }
 
+  const normUri = normalizeFsPath(uri.fsPath);
+
   // Fallback: search all open repositories for longest matching root prefix
   let bestMatch: Repository | undefined;
   let bestLen = -1;
 
   for (const r of api.repositories) {
-    const rootPath = r.rootUri.fsPath;
-    if (uri.fsPath.startsWith(rootPath) && rootPath.length > bestLen) {
+    const normRoot = normalizeFsPath(r.rootUri.fsPath);
+    if ((normUri === normRoot || normUri.startsWith(normRoot + "/")) && normRoot.length > bestLen) {
       bestMatch = r;
-      bestLen = rootPath.length;
+      bestLen = normRoot.length;
     }
   }
 

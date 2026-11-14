@@ -1,8 +1,9 @@
 import * as vscode from "vscode";
-import { existsSync } from "node:fs";
+import { existsSync, realpathSync } from "node:fs";
 import { join } from "node:path";
 import type { Repository } from "./vendor/git";
 import { GitStatus } from "./gitStatus";
+import { isHeadPublished } from "./runner";
 import type {
   Blocker,
   ChangedFile,
@@ -10,6 +11,7 @@ import type {
   HeadState,
   RepoSnapshot,
 } from "../shared/protocol";
+import { logDiag } from "./diag";
 
 const revisionsByRepo = new Map<string, number>();
 
@@ -25,11 +27,46 @@ export function resetRevisions(): void {
 }
 
 /**
+ * Normalizes a filesystem path for comparisons and repo-relative calculation:
+ * - Replaces backslashes with slashes.
+ * - Resolves symlinks if path exists (or resolves parent directory if file is absent).
+ * - On macOS, strips "/private" prefix from "/private/tmp", "/private/var", "/private/etc"
+ *   so that symlinked system directories match their canonical mount names.
+ */
+export function normalizeFsPath(fsPath: string): string {
+  let norm = fsPath.replace(/\\/g, "/");
+  try {
+    norm = realpathSync(fsPath).replace(/\\/g, "/");
+  } catch {
+    try {
+      const idx = norm.lastIndexOf("/");
+      if (idx > 0) {
+        const parent = norm.slice(0, idx);
+        const name = norm.slice(idx);
+        norm = realpathSync(parent).replace(/\\/g, "/") + name;
+      }
+    } catch {
+      // ignore
+    }
+  }
+  if (process.platform === "darwin") {
+    if (norm === "/private/tmp" || norm.startsWith("/private/tmp/")) {
+      norm = norm.slice(8);
+    } else if (norm === "/private/var" || norm.startsWith("/private/var/")) {
+      norm = norm.slice(8);
+    } else if (norm === "/private/etc" || norm.startsWith("/private/etc/")) {
+      norm = norm.slice(8);
+    }
+  }
+  return norm;
+}
+
+/**
  * Normalizes an absolute file URI into a POSIX repo-relative path.
  */
 export function toRepoRelative(repoRoot: string, fileUri: vscode.Uri): string {
-  const normRoot = repoRoot.replace(/\\/g, "/").replace(/\/$/, "");
-  const normPath = fileUri.fsPath.replace(/\\/g, "/");
+  const normRoot = normalizeFsPath(repoRoot).replace(/\/$/, "");
+  const normPath = normalizeFsPath(fileUri.fsPath);
 
   if (normPath.startsWith(normRoot + "/")) {
     return normPath.slice(normRoot.length + 1);
@@ -103,6 +140,34 @@ function mapStatusToKind(status: number): { kind: FileChangeKind; isIgnored: boo
   }
 }
 
+export function extractChangeUris(change: {
+  uri: vscode.Uri;
+  originalUri?: vscode.Uri | undefined;
+  renameUri?: vscode.Uri | undefined;
+  status?: unknown;
+}): { newUri: vscode.Uri; oldUri?: vscode.Uri | undefined } {
+  const isRename =
+    change.status === GitStatus.INDEX_RENAMED ||
+    change.status === GitStatus.INTENT_TO_RENAME ||
+    change.renameUri !== undefined;
+
+  if (isRename) {
+    const newUri = change.renameUri ?? change.uri;
+    const oldUri = change.originalUri;
+    return {
+      newUri,
+      oldUri: oldUri && oldUri.fsPath !== newUri.fsPath ? oldUri : undefined,
+    };
+  }
+
+  const newUri = change.uri;
+  const origUri = change.originalUri;
+  return {
+    newUri,
+    oldUri: origUri && origUri.fsPath !== newUri.fsPath ? origUri : undefined,
+  };
+}
+
 /**
  * Merges indexChanges and workingTreeChanges into a list of ChangedFiles.
  */
@@ -120,11 +185,11 @@ export function buildChangedFiles(repo: Repository): ChangedFile[] {
     const { kind, isIgnored } = mapStatusToKind(change.status);
     if (isIgnored) continue;
 
-    const relPath = toRepoRelative(repoRoot, change.uri);
+    const { newUri, oldUri } = extractChangeUris(change);
+    const relPath = toRepoRelative(repoRoot, newUri);
     let oldPath: string | undefined;
-    const origUri = (change as { originalUri?: vscode.Uri }).originalUri;
-    if (origUri && origUri.fsPath !== change.uri.fsPath) {
-      oldPath = toRepoRelative(repoRoot, origUri);
+    if (oldUri && oldUri.fsPath !== newUri.fsPath) {
+      oldPath = toRepoRelative(repoRoot, oldUri);
     }
 
     fileMap.set(relPath, {
@@ -140,16 +205,16 @@ export function buildChangedFiles(repo: Repository): ChangedFile[] {
     const { kind, isIgnored } = mapStatusToKind(change.status);
     if (isIgnored) continue;
 
-    const relPath = toRepoRelative(repoRoot, change.uri);
+    const { newUri, oldUri } = extractChangeUris(change);
+    const relPath = toRepoRelative(repoRoot, newUri);
     const existing = fileMap.get(relPath);
 
     if (existing) {
       existing.unstaged = true;
     } else {
       let oldPath: string | undefined;
-      const origUri = (change as { originalUri?: vscode.Uri }).originalUri;
-      if (origUri && origUri.fsPath !== change.uri.fsPath) {
-        oldPath = toRepoRelative(repoRoot, origUri);
+      if (oldUri && oldUri.fsPath !== newUri.fsPath) {
+        oldPath = toRepoRelative(repoRoot, oldUri);
       }
       fileMap.set(relPath, {
         staged: false,
@@ -210,8 +275,25 @@ export async function buildRepoSnapshot(
   repo: Repository,
   repoId: string,
   gitDir?: string,
+  gitPath?: string,
 ): Promise<RepoSnapshot> {
   const revision = getNextRevision(repoId);
+
+  if (process.env.GITFLUX_SPIKE_LOG === "1") {
+    const mapChange = (c: { uri: vscode.Uri; originalUri?: vscode.Uri | undefined; renameUri?: vscode.Uri | undefined; status?: unknown }) => ({
+      fsPath: c.uri.fsPath,
+      ...(c.originalUri ? { originalUri: c.originalUri.fsPath } : {}),
+      ...(c.renameUri ? { renameUri: c.renameUri.fsPath } : {}),
+      ...(c.status !== undefined ? { status: c.status } : {}),
+    });
+    logDiag("Repository.state entries on snapshot build", {
+      repoId,
+      workingTreeChanges: repo.state.workingTreeChanges.map(mapChange),
+      indexChanges: repo.state.indexChanges.map(mapChange),
+      mergeChanges: repo.state.mergeChanges.map(mapChange),
+    });
+  }
+
   const head = buildHeadState(repo);
   const blockers = detectBlockers(repo, gitDir);
   const files = buildChangedFiles(repo);
@@ -230,6 +312,16 @@ export async function buildRepoSnapshot(
     }
   }
 
+  // Publication check (computed only when head.kind === "branch")
+  let headPublished: boolean | undefined;
+  if (head.kind === "branch") {
+    try {
+      headPublished = await isHeadPublished(gitPath ?? "git", repo.rootUri.fsPath);
+    } catch {
+      headPublished = false;
+    }
+  }
+
   // Repo name from rootUri
   const rootPath = repo.rootUri.fsPath.replace(/\\/g, "/");
   const name = rootPath.slice(rootPath.lastIndexOf("/") + 1) || rootPath;
@@ -244,5 +336,6 @@ export async function buildRepoSnapshot(
     blockers,
     files,
     ...(headCommitEpochSeconds !== undefined ? { headCommitEpochSeconds } : {}),
+    ...(headPublished !== undefined ? { headPublished } : {}),
   };
 }

@@ -13,11 +13,11 @@ import type {
 import { getGitApi, isGitVersionSupported } from "./gitApi";
 import { buildRepoSnapshot } from "./repoState";
 import { detectShell } from "./shell";
-import { runGit, executePlan } from "./runner";
-import { buildCommitPlan } from "../core/plan";
+import { runGit, executePlan, executeAmendPlan, isHeadPublished } from "./runner";
+import { buildCommitPlan, buildAmendPlan } from "../core/plan";
 import { renderShell } from "../core/shellRender";
 import { sendCommandToTerminal, getEffectiveAutoRun } from "./terminal";
-import { resolveSelection } from "./resourceResolver";
+import { resolveSelection, extractUrisFromArgs } from "./resourceResolver";
 import {
   CONFIG_SHELL,
   CONFIG_WORKING_HOURS_START,
@@ -39,17 +39,169 @@ export function resolveEffectiveShell(
   return "none";
 }
 
-export class CommitPanelProvider implements vscode.WebviewViewProvider {
-  private view?: vscode.WebviewView;
-  private activeRepoId?: string;
+export class CommitPanelProvider implements vscode.WebviewViewProvider, vscode.Disposable {
+  private view?: vscode.WebviewView | undefined;
+  private activeRepoId?: string | undefined;
   private pendingPreselect?: { repoId: string; paths: readonly string[]; droppedCount: number } | undefined;
   private readonly activeRuns = new Map<string, AbortController>();
   private gitVersionOk = true;
+  private webviewReady = false;
+  private gitApi?: GitAPI | undefined;
+  private readonly gitSubscriptions: vscode.Disposable[] = [];
+  private readonly repoSubscriptions = new Map<string, vscode.Disposable>();
+  private readonly repoDebounceTimers = new Map<string, NodeJS.Timeout>();
 
   constructor(
     private readonly extensionUri: vscode.Uri,
     private readonly outputChannel: vscode.OutputChannel,
-  ) {}
+  ) {
+    void this.initGit();
+  }
+
+  public async initGit(): Promise<GitAPI | undefined> {
+    if (this.gitApi) {
+      return this.gitApi;
+    }
+    const gitApi = await getGitApi();
+    if (!gitApi) return undefined;
+    this.gitApi = gitApi;
+
+    try {
+      const vRes = await runGit(gitApi.git.path, ["--version"], { cwd: process.cwd() });
+      this.gitVersionOk = isGitVersionSupported(vRes.stdout);
+    } catch {
+      this.gitVersionOk = false;
+    }
+
+    this.gitSubscriptions.push(
+      gitApi.onDidChangeState(() => {
+        void this.handleGitStateChanged();
+      }),
+      gitApi.onDidOpenRepository((repo) => {
+        void this.handleRepoOpened(repo);
+      }),
+      gitApi.onDidCloseRepository((repo) => {
+        void this.handleRepoClosed(repo);
+      }),
+    );
+
+    for (const repo of gitApi.repositories) {
+      this.subscribeToRepo(repo);
+    }
+
+    return gitApi;
+  }
+
+  private subscribeToRepo(repo: Repository): void {
+    const repoId = repo.rootUri.fsPath;
+    if (this.repoSubscriptions.has(repoId)) return;
+
+    const sub = repo.state.onDidChange(() => {
+      this.debounceRepoStateChange(repo);
+    });
+    this.repoSubscriptions.set(repoId, sub);
+  }
+
+  private unsubscribeFromRepo(repoId: string): void {
+    const sub = this.repoSubscriptions.get(repoId);
+    if (sub) {
+      sub.dispose();
+      this.repoSubscriptions.delete(repoId);
+    }
+    const timer = this.repoDebounceTimers.get(repoId);
+    if (timer) {
+      clearTimeout(timer);
+      this.repoDebounceTimers.delete(repoId);
+    }
+  }
+
+  private debounceRepoStateChange(repo: Repository): void {
+    const repoId = repo.rootUri.fsPath;
+    const existing = this.repoDebounceTimers.get(repoId);
+    if (existing) {
+      clearTimeout(existing);
+    }
+    const timer = setTimeout(() => {
+      this.repoDebounceTimers.delete(repoId);
+      void this.handleRepoStateChanged(repo);
+    }, 250);
+    this.repoDebounceTimers.set(repoId, timer);
+  }
+
+  private async handleRepoStateChanged(repo: Repository): Promise<void> {
+    const repoId = repo.rootUri.fsPath;
+    if (!this.activeRepoId) {
+      this.activeRepoId = repoId;
+      if (this.view && this.webviewReady) {
+        await this.sendFullInit();
+      }
+      return;
+    }
+
+    if (this.activeRepoId === repoId) {
+      if (this.view && this.webviewReady) {
+        const snapshot = await buildRepoSnapshot(repo, repoId);
+        this.postMessage({ type: "snapshot", snapshot });
+      }
+    }
+  }
+
+  private async handleRepoOpened(repo: Repository): Promise<void> {
+    this.subscribeToRepo(repo);
+    if (!this.activeRepoId) {
+      this.activeRepoId = repo.rootUri.fsPath;
+    }
+    if (this.view && this.webviewReady) {
+      await this.sendFullInit();
+    }
+  }
+
+  private async handleRepoClosed(repo: Repository): Promise<void> {
+    const repoId = repo.rootUri.fsPath;
+    this.unsubscribeFromRepo(repoId);
+    if (this.activeRepoId === repoId) {
+      const nextRepo = this.gitApi?.repositories.find((r) => r.rootUri.fsPath !== repoId);
+      this.activeRepoId = nextRepo ? nextRepo.rootUri.fsPath : undefined;
+    }
+    if (this.view && this.webviewReady) {
+      await this.sendFullInit();
+    }
+  }
+
+  private async handleGitStateChanged(): Promise<void> {
+    if (this.view && this.webviewReady) {
+      await this.sendFullInit();
+    }
+  }
+
+  private async sendFullInit(): Promise<void> {
+    const gitApi = await this.initGit();
+    const { kind: detectedKind, wslStyle } = detectShell(vscode.env.shell);
+    const env = this.getHostEnv(detectedKind, wslStyle);
+
+    const repos: RepoSummary[] = (gitApi?.repositories ?? []).map((r) => ({
+      repoId: r.rootUri.fsPath,
+      name: r.rootUri.fsPath.split("/").pop() || r.rootUri.fsPath,
+    }));
+
+    const activeRepo = this.getActiveRepository(gitApi);
+    let snapshot: RepoSnapshot | undefined;
+    if (activeRepo) {
+      snapshot = await buildRepoSnapshot(activeRepo, activeRepo.rootUri.fsPath);
+      this.activeRepoId = activeRepo.rootUri.fsPath;
+    } else {
+      this.activeRepoId = undefined;
+    }
+
+    this.postMessage({
+      type: "init",
+      protocolVersion: PROTOCOL_VERSION,
+      env,
+      repos,
+      ...(this.activeRepoId ? { activeRepoId: this.activeRepoId } : {}),
+      ...(snapshot ? { snapshot } : {}),
+    });
+  }
 
   public async resolveWebviewView(
     webviewView: vscode.WebviewView,
@@ -58,7 +210,15 @@ export class CommitPanelProvider implements vscode.WebviewViewProvider {
   ): Promise<void> {
     void _context;
     void _token;
+    this.webviewReady = false;
     this.view = webviewView;
+
+    if ("onDidDispose" in webviewView && typeof webviewView.onDidDispose === "function") {
+      webviewView.onDidDispose(() => {
+        this.webviewReady = false;
+        this.view = undefined;
+      });
+    }
 
     webviewView.webview.options = {
       enableScripts: true,
@@ -77,46 +237,82 @@ export class CommitPanelProvider implements vscode.WebviewViewProvider {
       await this.handleMessage(data);
     });
 
-    // Check git version once
-    const gitApi = await getGitApi();
-    if (gitApi) {
-      try {
-        const vRes = await runGit(gitApi.git.path, ["--version"], { cwd: process.cwd() });
-        this.gitVersionOk = isGitVersionSupported(vRes.stdout);
-      } catch {
-        this.gitVersionOk = false;
-      }
-    }
+    await this.initGit();
   }
 
-  public async handleSelection(uris: vscode.Uri[]): Promise<void> {
-    const gitApi = await getGitApi();
+  public async handleSelection(args: unknown[]): Promise<void> {
+    const gitApi = await this.initGit();
     if (!gitApi) return;
 
-    const resolved = resolveSelection(gitApi, uris);
-    if (!resolved.repo) return;
+    if (gitApi.repositories.length === 0) {
+      const uris = extractUrisFromArgs(args);
+      for (const uri of uris) {
+        try {
+          await gitApi.openRepository(uri);
+        } catch {
+          // ignore
+        }
+      }
+      for (const folder of vscode.workspace.workspaceFolders ?? []) {
+        try {
+          await gitApi.openRepository(folder.uri);
+        } catch {
+          // ignore
+        }
+      }
+    }
 
-    const repo = resolved.repo;
+    const initialResolve = resolveSelection(gitApi, args);
+    if (!initialResolve.repo) {
+      await vscode.commands.executeCommand(`${VIEW_ID}.focus`);
+      return;
+    }
+
+    const repo = initialResolve.repo;
     const repoId = repo.rootUri.fsPath;
     this.activeRepoId = repoId;
 
-    if (this.view) {
-      const snapshot = await buildRepoSnapshot(repo, repoId);
+    const snapshot = await buildRepoSnapshot(repo, repoId);
+    const resolved = resolveSelection(gitApi, args, snapshot.files.map((f) => f.path));
+
+    const mappedPaths = resolved.paths.map((p) => {
+      const match = snapshot.files.find((f) => f.oldPath === p);
+      return match ? match.path : p;
+    });
+    const finalPaths = Array.from(new Set(mappedPaths));
+
+    await vscode.commands.executeCommand(`${VIEW_ID}.focus`);
+
+    if (this.view && this.webviewReady) {
       this.postMessage({ type: "snapshot", snapshot });
       this.postMessage({
         type: "preselect",
         repoId,
-        paths: resolved.paths,
+        paths: finalPaths,
         droppedCount: resolved.droppedCount,
       });
     } else {
       this.pendingPreselect = {
         repoId,
-        paths: resolved.paths,
+        paths: finalPaths,
         droppedCount: resolved.droppedCount,
       };
-      await vscode.commands.executeCommand(`${VIEW_ID}.focus`);
     }
+  }
+
+  public dispose(): void {
+    for (const d of this.gitSubscriptions) {
+      d.dispose();
+    }
+    this.gitSubscriptions.length = 0;
+    for (const [, sub] of this.repoSubscriptions) {
+      sub.dispose();
+    }
+    this.repoSubscriptions.clear();
+    for (const [, timer] of this.repoDebounceTimers) {
+      clearTimeout(timer);
+    }
+    this.repoDebounceTimers.clear();
   }
 
   private postMessage(msg: HostToWebview): void {
@@ -160,6 +356,7 @@ export class CommitPanelProvider implements vscode.WebviewViewProvider {
 
     switch (msg.type) {
       case "ready": {
+        this.webviewReady = true;
         if (msg.protocolVersion !== PROTOCOL_VERSION) {
           this.outputChannel.appendLine(`Protocol version mismatch: expected ${String(PROTOCOL_VERSION)}, got ${String(msg.protocolVersion)}`);
           void vscode.window.showErrorMessage(
@@ -168,26 +365,11 @@ export class CommitPanelProvider implements vscode.WebviewViewProvider {
           return;
         }
 
-        const repos: RepoSummary[] = (gitApi?.repositories ?? []).map((r) => ({
-          repoId: r.rootUri.fsPath,
-          name: r.rootUri.fsPath.split("/").pop() || r.rootUri.fsPath,
-        }));
-
-        const activeRepo = this.getActiveRepository(gitApi);
-        let snapshot: RepoSnapshot | undefined;
-        if (activeRepo) {
-          snapshot = await buildRepoSnapshot(activeRepo, activeRepo.rootUri.fsPath);
-          this.activeRepoId = activeRepo.rootUri.fsPath;
+        if (this.pendingPreselect) {
+          this.activeRepoId = this.pendingPreselect.repoId;
         }
 
-        this.postMessage({
-          type: "init",
-          protocolVersion: PROTOCOL_VERSION,
-          env,
-          repos,
-          ...(this.activeRepoId ? { activeRepoId: this.activeRepoId } : {}),
-          ...(snapshot ? { snapshot } : {}),
-        });
+        await this.sendFullInit();
 
         if (this.pendingPreselect) {
           const pre = this.pendingPreselect;
@@ -219,25 +401,7 @@ export class CommitPanelProvider implements vscode.WebviewViewProvider {
 
       case "initRepository": {
         await vscode.commands.executeCommand("git.init");
-        // Re-read repositories and send updated init
-        const repos: RepoSummary[] = (gitApi?.repositories ?? []).map((r) => ({
-          repoId: r.rootUri.fsPath,
-          name: r.rootUri.fsPath.split("/").pop() || r.rootUri.fsPath,
-        }));
-        const active = this.getActiveRepository(gitApi);
-        let snapshot: RepoSnapshot | undefined;
-        if (active) {
-          snapshot = await buildRepoSnapshot(active, active.rootUri.fsPath);
-          this.activeRepoId = active.rootUri.fsPath;
-        }
-        this.postMessage({
-          type: "init",
-          protocolVersion: PROTOCOL_VERSION,
-          env,
-          repos,
-          ...(this.activeRepoId ? { activeRepoId: this.activeRepoId } : {}),
-          ...(snapshot ? { snapshot } : {}),
-        });
+        await this.sendFullInit();
         break;
       }
 
@@ -464,6 +628,14 @@ export class CommitPanelProvider implements vscode.WebviewViewProvider {
           result,
         });
 
+        // Push fresh snapshot immediately so committed files clear from the UI
+        try {
+          const postRunSnapshot = await buildRepoSnapshot(repo, msg.draft.repoId);
+          this.postMessage({ type: "snapshot", snapshot: postRunSnapshot });
+        } catch {
+          // If repo state reading fails, ignore
+        }
+
         // Display results to user
         if (!result.ok) {
           if (this.view && !this.view.visible) {
@@ -474,6 +646,103 @@ export class CommitPanelProvider implements vscode.WebviewViewProvider {
           const iso = planRes.value.timestamp.iso;
           void vscode.window
             .showInformationMessage(`Committed ${shortSha} at ${iso}`, "Copy SHA")
+            .then((selected) => {
+              if (selected === "Copy SHA") {
+                void vscode.env.clipboard.writeText(result.commitSha);
+              }
+            });
+        }
+        break;
+      }
+
+      case "amendHead": {
+        const repo = gitApi?.repositories.find((r) => r.rootUri.fsPath === msg.draft.repoId);
+        if (!repo) {
+          this.postMessage({
+            type: "result",
+            requestId: msg.requestId,
+            result: { ok: false, code: "INTERNAL", message: "Repository not found", rolledBack: false },
+          });
+          return;
+        }
+
+        if (!gitApi) {
+          this.postMessage({
+            type: "result",
+            requestId: msg.requestId,
+            result: { ok: false, code: "INTERNAL", message: "Git API unavailable", rolledBack: false },
+          });
+          return;
+        }
+
+        // Re-build fresh snapshot + re-run isHeadPublished at execution time (never trust cached state)
+        const freshSnapshot = await buildRepoSnapshot(repo, msg.draft.repoId, undefined, gitApi.git.path);
+        const isPublished = await isHeadPublished(gitApi.git.path, repo.rootUri.fsPath);
+
+        const planRes = buildAmendPlan({
+          repoRoot: freshSnapshot.repoRoot,
+          head: freshSnapshot.head,
+          blockers: freshSnapshot.blockers,
+          when: msg.draft.when,
+          isPublished,
+        });
+
+        if (!planRes.ok) {
+          this.postMessage({
+            type: "result",
+            requestId: msg.requestId,
+            result: { ok: false, code: planRes.error.code, message: planRes.error.detail, rolledBack: false },
+          });
+          return;
+        }
+
+        const abortController = new AbortController();
+        this.activeRuns.set(msg.requestId, abortController);
+
+        let result: ActionResult;
+        try {
+          result = await executeAmendPlan(
+            gitApi.git.path,
+            repo,
+            msg.draft.repoId,
+            planRes.value,
+            (step, status) => {
+              this.postMessage({
+                type: "progress",
+                requestId: msg.requestId,
+                step,
+                status,
+              });
+            },
+            abortController.signal,
+          );
+        } finally {
+          this.activeRuns.delete(msg.requestId);
+        }
+
+        this.postMessage({
+          type: "result",
+          requestId: msg.requestId,
+          result,
+        });
+
+        // Push fresh snapshot immediately
+        try {
+          const postRunSnapshot = await buildRepoSnapshot(repo, msg.draft.repoId, undefined, gitApi.git.path);
+          this.postMessage({ type: "snapshot", snapshot: postRunSnapshot });
+        } catch {
+          // If repo state reading fails, ignore
+        }
+
+        // Display results to user
+        if (!result.ok) {
+          if (this.view && !this.view.visible) {
+            void vscode.window.showErrorMessage(result.message);
+          }
+        } else if (result.action === "amendHead") {
+          const shortSha = result.commitSha.slice(0, 7);
+          void vscode.window
+            .showInformationMessage(`Rewrote the date of local commit ${shortSha}.`, "Copy SHA")
             .then((selected) => {
               if (selected === "Copy SHA") {
                 void vscode.env.clipboard.writeText(result.commitSha);

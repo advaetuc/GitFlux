@@ -68,6 +68,25 @@ describe("renderShell", () => {
     }
   });
 
+  it("renders pwsh with 3 units (add + commit + push) nesting LastExitCode", () => {
+    const plan3: CommitPlan = {
+      ...basePlan,
+      paths: ["src/a.ts" as GitPath, "new.ts" as GitPath],
+      untrackedPaths: ["new.ts" as GitPath],
+      push: {
+        remote: "origin" as RemoteName,
+        branch: "main" as BranchName,
+        setUpstream: false,
+      },
+    };
+    const res = renderShell(plan3, "pwsh", { includeRepoDir: true });
+    expect(res.ok).toBe(true);
+    if (res.ok) {
+      expect(res.value.singleLine).toContain("; if ($LASTEXITCODE -eq 0) {");
+      expect(res.value.singleLine).toContain("push");
+    }
+  });
+
   it("renders cmd using AM-14 canonical chain with unconditional cleanup", () => {
     const planWithPush: CommitPlan = {
       ...basePlan,

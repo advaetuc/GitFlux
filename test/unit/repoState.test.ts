@@ -1,4 +1,10 @@
-import { describe, it, expect, beforeEach } from "vitest";
+import { describe, it, expect, beforeEach, vi } from "vitest";
+
+vi.mock("vscode", () => ({
+  Uri: {
+    file: (f: string) => ({ fsPath: f, scheme: "file" }),
+  },
+}));
 import {
   buildChangedFiles,
   buildHeadState,
@@ -150,6 +156,27 @@ describe("repoState (Phase 2)", () => {
     const files = buildChangedFiles(repo);
     expect(files[0]?.kind).toBe("renamed");
     expect(files[0]?.oldPath).toBe("old_name.ts");
+  });
+
+  it("uses renameUri for new path and originalUri for oldPath when renameUri is present", () => {
+    const repo = mockRepo({
+      state: {
+        ...mockRepo().state,
+        indexChanges: [
+          {
+            uri: mockUri("/workspace/repo/old_target.ts"),
+            originalUri: mockUri("/workspace/repo/old_target.ts"),
+            renameUri: mockUri("/workspace/repo/new_destination.ts"),
+            status: GitStatus.INDEX_RENAMED,
+          } as unknown as Change,
+        ],
+      } as unknown as RepositoryState,
+    });
+
+    const files = buildChangedFiles(repo);
+    expect(files[0]?.kind).toBe("renamed");
+    expect(files[0]?.path).toBe("new_destination.ts");
+    expect(files[0]?.oldPath).toBe("old_target.ts");
   });
 
   describe("detectBlockers", () => {

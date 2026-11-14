@@ -29,13 +29,24 @@ jobs:
           node-version: 20
           cache: npm
       - run: npm ci
-      - run: npx vitest run test/unit --coverage
+      - name: Run Spikes S1 and S2
+        run: |
+          git --version
+          bash docs/spikes/s1.sh
+          bash docs/spikes/s2.sh
+      - run: npm run test:coverage
 
   shell-matrix:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, macos-latest, windows-latest]
+        include:
+          - os: ubuntu-latest
+            require_shells: "bash,sh,zsh,fish,pwsh"
+          - os: macos-latest
+            require_shells: "zsh,bash,pwsh,fish"
+          - os: windows-latest
+            require_shells: "cmd,powershell,pwsh,bash"
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
@@ -49,7 +60,13 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y zsh fish
+      - name: Install extra shells on macOS
+        if: runner.os == 'macOS'
+        run: |
+          brew install fish || true
       - name: Run Shell Matrix Suite
+        env:
+          REQUIRE_SHELLS: ${{ matrix.require_shells }}
         run: npm run test:shell
 
   integration-tests:

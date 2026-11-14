@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
-import { buildExecPlan } from "../../src/core/execPlan";
-import type { CommitPlan, GitPath } from "../../src/core/types";
+import { buildExecPlan, buildAmendExecPlan } from "../../src/core/execPlan";
+import type { AmendPlan, CommitPlan, GitPath } from "../../src/core/types";
 
 describe("buildExecPlan", () => {
   const basePlan: CommitPlan = {
@@ -180,5 +180,62 @@ describe("buildExecPlan", () => {
         expect(arg.includes("<")).toBe(false);
       }
     }
+  });
+
+  describe("buildAmendExecPlan (Phase 5)", () => {
+    const amendPlan: AmendPlan = {
+      repoRoot: "/workspace/repo",
+      timestamp: {
+        iso: "2026-03-02T10:41:07+0530",
+        epochSeconds: 1772428267,
+        offsetMinutes: 330,
+      },
+    };
+
+    it("builds exact exec plan for commit --amend --only with verify and no rollback", () => {
+      const plan = buildAmendExecPlan(amendPlan);
+      expect(plan.steps).toHaveLength(2); // commit, verify
+      expect(plan.rollback).toBeUndefined();
+
+      // Step 1: commit
+      const commit = plan.steps[0];
+      expect(commit).toBeDefined();
+      if (!commit) return;
+      expect(commit.id).toBe("commit");
+      expect(commit.argv).toEqual([
+        "--literal-pathspecs",
+        "commit",
+        "--amend",
+        "--only",
+        "--no-edit",
+        "--allow-empty",
+        "--date=2026-03-02T10:41:07+0530",
+        "--cleanup=verbatim",
+      ]);
+      expect(commit.stdin).toBeUndefined();
+      expect(commit.env).toEqual({
+        GIT_COMMITTER_DATE: "2026-03-02T10:41:07+0530",
+      });
+
+      // Step 2: verify
+      const verify = plan.steps[1];
+      expect(verify).toBeDefined();
+      if (!verify) return;
+      expect(verify.id).toBe("verify");
+      expect(verify.argv).toEqual(["log", "-1", "--format=%H%x00%ad%x00%cd", "--date=raw"]);
+
+      // Expected
+      expect(plan.expected).toEqual({
+        epochSeconds: 1772428267,
+        offsetMinutes: 330,
+      });
+
+      // Assert no --no-verify, no --force, no shell joining
+      for (const step of plan.steps) {
+        expect(step.argv).not.toContain("--no-verify");
+        expect(step.argv).not.toContain("--force");
+        expect(step.argv).not.toContain("-f");
+      }
+    });
   });
 });

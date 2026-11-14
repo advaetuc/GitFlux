@@ -86,6 +86,19 @@ export interface CommitPlan {
   readonly push?: PushSpec;
 }
 
+export interface AmendPlan {
+  readonly repoRoot: string;
+  readonly timestamp: GitTimestamp;
+}
+
+export interface AmendPlanInput {
+  readonly repoRoot: string;
+  readonly head: HeadState;
+  readonly blockers: readonly Blocker[];
+  readonly when: { readonly local: LocalDateTime; readonly offsetMinutes: number };
+  readonly isPublished: boolean;
+}
+
 // ---- Exec plan (Run Now: no shell involved) ---------------------------------
 
 export type ExecStepId = "add" | "commit" | "verify" | "rollback";

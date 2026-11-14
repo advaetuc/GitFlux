@@ -1,4 +1,4 @@
-# Dev Display Name
+# GitFlux
 
 Stage selected changed files and commit them with a custom author and committer date directly from VS Code.
 
@@ -30,12 +30,12 @@ Stage selected changed files and commit them with a custom author and committer 
 
 ## Configuration
 
-- `dev-extension.shell`: Preferred shell dialect for Copy and Send to Terminal (`auto`, `bash`, `zsh`, `sh`, `fish`, `pwsh`, `powershell`, `cmd`). Defaults to `auto`.
-- `dev-extension.workingHours.start`: Start of the working hours window (24-hour `HH:MM`). Defaults to `09:30`.
-- `dev-extension.workingHours.end`: End of the working hours window (24-hour `HH:MM`). Defaults to `18:30`.
-- `dev-extension.push.defaultEnabled`: Whether **Push after commit** starts checked. Defaults to `false`.
-- `dev-extension.terminal.autoRun`: Automatically press Enter after **Send to Terminal**. Application-scoped so repository workspace settings cannot enable it. Defaults to `false`.
+- `gitflux.shell`: Preferred shell dialect for Copy and Send to Terminal (`auto`, `bash`, `zsh`, `sh`, `fish`, `pwsh`, `powershell`, `cmd`). Defaults to `auto`.
+- `gitflux.workingHours.start`: Start of the working hours window (24-hour `HH:MM`). Defaults to `09:30`.
+- `gitflux.workingHours.end`: End of the working hours window (24-hour `HH:MM`). Defaults to `18:30`.
+- `gitflux.push.defaultEnabled`: Whether **Push after commit** starts checked. Defaults to `false`.
+- `gitflux.terminal.autoRun`: Automatically press Enter after **Send to Terminal**. Application-scoped so repository workspace settings cannot enable it. Defaults to `false`.
 
 ## License
 
-UNLICENSED
+MIT

@@ -31,8 +31,8 @@ describe("isWebviewToHost (§7.2)", () => {
     expect(isWebviewToHost({ type: "cancel", requestId: "req-123" })).toBe(true);
   });
 
-  it("accepts valid copy, sendToTerminal, run messages", () => {
-    for (const t of ["copy", "sendToTerminal", "run"] as const) {
+  it("accepts valid copy, sendToTerminal, run, amendHead messages", () => {
+    for (const t of ["copy", "sendToTerminal", "run", "amendHead"] as const) {
       expect(
         isWebviewToHost({
           type: t,

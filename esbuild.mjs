@@ -21,6 +21,9 @@ const hostOptions = /** @type {esbuild.BuildOptions} */ ({
 // Webview bundle: browser, IIFE
 const webviewOptions = /** @type {esbuild.BuildOptions} */ ({
   entryPoints: ["src/webview/main.tsx"],
+  tsconfig: "tsconfig.webview.json",
+  jsx: "automatic",
+  jsxImportSource: "preact",
   bundle: true,
   outfile: "dist/webview/main.js",
   platform: "browser",

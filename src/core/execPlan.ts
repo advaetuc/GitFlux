@@ -1,4 +1,4 @@
-import type { CommitPlan, ExecPlan, ExecStep } from "./types";
+import type { AmendPlan, CommitPlan, ExecPlan, ExecStep } from "./types";
 
 /**
  * Builds an ExecPlan for direct execution via git CLI (Run Now mode).
@@ -87,6 +87,43 @@ export function buildExecPlan(plan: CommitPlan): ExecPlan {
   return {
     steps,
     ...(rollback ? { rollback } : {}),
+    expected: {
+      epochSeconds: plan.timestamp.epochSeconds,
+      offsetMinutes: plan.timestamp.offsetMinutes,
+    },
+  };
+}
+
+/**
+ * Builds an ExecPlan for amending the HEAD commit date (Phase 5).
+ * Uses git commit --amend --only --no-edit --allow-empty --date=<iso> --cleanup=verbatim
+ * with GIT_COMMITTER_DATE=<iso>.
+ * No add or rollback steps; staged and working tree files remain byte-identical.
+ */
+export function buildAmendExecPlan(plan: AmendPlan): ExecPlan {
+  return {
+    steps: [
+      {
+        id: "commit",
+        argv: [
+          "--literal-pathspecs",
+          "commit",
+          "--amend",
+          "--only",
+          "--no-edit",
+          "--allow-empty",
+          "--date=" + plan.timestamp.iso,
+          "--cleanup=verbatim",
+        ],
+        env: {
+          GIT_COMMITTER_DATE: plan.timestamp.iso,
+        },
+      },
+      {
+        id: "verify",
+        argv: ["log", "-1", "--format=%H%x00%ad%x00%cd", "--date=raw"],
+      },
+    ],
     expected: {
       epochSeconds: plan.timestamp.epochSeconds,
       offsetMinutes: plan.timestamp.offsetMinutes,

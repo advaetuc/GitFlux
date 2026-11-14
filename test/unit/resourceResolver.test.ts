@@ -95,4 +95,25 @@ describe("resourceResolver (AM-17)", () => {
     expect(res.paths).toEqual(["src/a.ts", "src/nested/b.ts"]);
     expect(res.paths).not.toContain("other/c.ts");
   });
+
+  it("normalizes /tmp vs /private/tmp symlink prefixes on macOS", () => {
+    const tmpRepo = {
+      rootUri: { fsPath: "/private/tmp/smoke-repo" },
+    } as Repository;
+
+    const tmpApi = {
+      repositories: [tmpRepo],
+      getRepository: (uri: { fsPath: string }) => {
+        if (uri.fsPath.startsWith("/private/tmp/smoke-repo")) return tmpRepo;
+        return null;
+      },
+    } as unknown as GitAPI;
+
+    // Selected file has /tmp/smoke-repo/file.txt (without /private)
+    const fileUri = vscode.Uri.file("/tmp/smoke-repo/file.txt");
+    const res = resolveSelection(tmpApi, [fileUri]);
+    expect(res.repo).toBe(tmpRepo);
+    expect(res.paths).toEqual(["file.txt"]);
+    expect(res.droppedCount).toBe(0);
+  });
 });

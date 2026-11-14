@@ -1,0 +1,22 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Run Extension",
+      "type": "extensionHost",
+      "request": "launch",
+      "args": [
+        "--new-window",
+        "/Users/advaet/Projects/gitflux-smoke-repo",
+        "--extensionDevelopmentPath=${workspaceFolder}"
+      ],
+      "env": {
+        "GITFLUX_SPIKE_LOG": "1"
+      },
+      "outFiles": [
+        "${workspaceFolder}/dist/**/*.js"
+      ],
+      "preLaunchTask": "npm: build"
+    }
+  ]
+}

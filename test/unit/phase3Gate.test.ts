@@ -210,4 +210,11 @@ describe("Phase 3 Gate Verifications", () => {
       expect(gzipped.length).toBeLessThan(60 * 1024);
     }
   });
+
+  it("webview bundle uses Preact automatic JSX runtime and never emits React.createElement", () => {
+    const bundlePath = path.resolve(__dirname, "../../dist/webview/main.js");
+    expect(fs.existsSync(bundlePath)).toBe(true);
+    const content = fs.readFileSync(bundlePath, "utf-8");
+    expect(content).not.toContain("React.createElement");
+  });
 });

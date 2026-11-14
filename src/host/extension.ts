@@ -8,7 +8,7 @@ import {
 } from "./ids";
 import { CommitPanelProvider } from "./panelProvider";
 import { handleTerminalClosed } from "./terminal";
-import { extractUrisFromArgs } from "./resourceResolver";
+import { logDiag } from "./diag";
 
 export function activate(context: vscode.ExtensionContext): void {
   const outputChannel = vscode.window.createOutputChannel(OUTPUT_CHANNEL_NAME);
@@ -30,11 +30,10 @@ export function activate(context: vscode.ExtensionContext): void {
       await vscode.commands.executeCommand(`${VIEW_ID}.focus`);
     },
     [COMMAND_OPEN_FOR_SELECTION]: async (...args: unknown[]) => {
-      const uris = extractUrisFromArgs(args);
-      if (uris.length > 0) {
-        await provider.handleSelection(uris);
+      if (process.env.GITFLUX_SPIKE_LOG === "1") {
+        logDiag("openForSelection raw arguments", args);
       }
-      await vscode.commands.executeCommand(`${VIEW_ID}.focus`);
+      await provider.handleSelection(args);
     },
   };
 

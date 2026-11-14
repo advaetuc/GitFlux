@@ -26,6 +26,8 @@ export interface RepoSnapshot {
   readonly remotes: readonly string[];
   /** Committer date of HEAD, for the "earlier than parent" warning. Absent when unborn. */
   readonly headCommitEpochSeconds?: number;
+  /** Whether HEAD commit is published to a remote. Computed only when head.kind === "branch". */
+  readonly headPublished?: boolean | undefined;
   readonly blockers: readonly import("../core/types").Blocker[];
   /** Conflicted files are excluded (they raise UNMERGED_FILES). */
   readonly files: readonly import("../core/types").ChangedFile[];
@@ -76,6 +78,12 @@ export type ActionResult =
       readonly pushed: boolean;
     }
   | {
+      readonly ok: true;
+      readonly action: "amendHead";
+      readonly commitSha: string;
+      readonly verified: boolean;
+    }
+  | {
       readonly ok: false;
       readonly code: ErrorCode;
       readonly step?: RunStepId;
@@ -95,6 +103,7 @@ export type WebviewToHost =
   | { readonly type: "copy"; readonly requestId: string; readonly draft: CommitDraft }
   | { readonly type: "sendToTerminal"; readonly requestId: string; readonly draft: CommitDraft }
   | { readonly type: "run"; readonly requestId: string; readonly draft: CommitDraft }
+  | { readonly type: "amendHead"; readonly requestId: string; readonly draft: CommitDraft }
   | { readonly type: "cancel"; readonly requestId: string };
 
 export type HostToWebview =

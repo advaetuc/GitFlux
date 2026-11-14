@@ -85,6 +85,7 @@ describe("toPosixRoot", () => {
 
   it("preserves Windows drive root 'C:/'", () => {
     expect(toPosixRoot("C:\\")).toBe("C:/");
+    expect(toPosixRoot("C:\\\\\\")).toBe("C:/");
     expect(toPosixRoot("C:/")).toBe("C:/");
     expect(toPosixRoot("d:")).toBe("d:/");
   });

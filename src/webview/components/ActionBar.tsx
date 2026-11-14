@@ -1,7 +1,8 @@
-import type { ActionResult, HostEnv, RunStepId } from "../../shared/protocol";
-import type { CommitPlan, Result, ShellSetting } from "../../core/types";
+import type { ActionResult, HostEnv, RepoSnapshot, RunStepId } from "../../shared/protocol";
+import type { CommitPlan, LocalDateTime, Result, ShellSetting } from "../../core/types";
 import type { PlanError } from "../../core/plan";
 import type { PlanWarning } from "../../core/warnings";
+import { resolveTimestamp } from "../../core/timestamp";
 import { resolveEffectiveShell } from "../draftReducer";
 
 export interface ActionBarProps {
@@ -15,9 +16,12 @@ export interface ActionBarProps {
   readonly inFlight: boolean;
   readonly currentStep: RunStepId | undefined;
   readonly lastResult: ActionResult | undefined;
+  readonly snapshot?: RepoSnapshot | undefined;
+  readonly when: { readonly local: LocalDateTime; readonly offsetMinutes: number };
   readonly onCommit: () => void;
   readonly onCopy: () => void;
   readonly onSendToTerminal: () => void;
+  readonly onAmendHead: () => void;
   readonly onCancel: () => void;
   readonly onSetDetachedAck: (ack: boolean) => void;
 }
@@ -35,9 +39,12 @@ export function ActionBar({
   inFlight,
   currentStep,
   lastResult,
+  snapshot,
+  when,
   onCommit,
   onCopy,
   onSendToTerminal,
+  onAmendHead,
   onCancel,
   onSetDetachedAck,
 }: ActionBarProps) {
@@ -65,9 +72,28 @@ export function ActionBar({
       ? "Select a shell"
       : "";
 
+  // Amend HEAD date enablement (Blueprint §10 & §14.2)
+  const timeRes = resolveTimestamp(when.local, when.offsetMinutes);
+  const isTimestampValid = timeRes.ok;
+  const isBranch = snapshot?.head.kind === "branch";
+  const hasBlockers = (snapshot?.blockers.length ?? 0) > 0;
+  const isPublished = snapshot?.headPublished === true;
+
+  let amendDisabledReason = "";
+  if (isPublished) {
+    amendDisabledReason = "Commit is already on a remote; changing its date would require a force push (unsupported).";
+  } else if (!isBranch) {
+    amendDisabledReason = "Amending HEAD date is only supported on a branch.";
+  } else if (hasBlockers) {
+    amendDisabledReason = `Operation blocked: ${snapshot.blockers.join(", ")} in progress.`;
+  } else if (!isTimestampValid) {
+    amendDisabledReason = "Invalid date or time";
+  }
+
   const canCommit = !inFlight && commitDisabledReason === "";
   const canCopy = !inFlight && copyDisabledReason === "";
   const canSend = !inFlight && terminalDisabledReason === "";
+  const canAmend = !inFlight && amendDisabledReason === "";
 
   return (
     <div class="form-section">
@@ -122,7 +148,7 @@ export function ActionBar({
       )}
 
       {/* Action Buttons */}
-      <div class="row">
+      <div class="row row-wrap">
         <button
           type="button"
           class="btn btn-primary"
@@ -154,6 +180,17 @@ export function ActionBar({
         >
           <span class="codicon codicon-terminal"></span>
           <span>Send to Terminal</span>
+        </button>
+
+        <button
+          type="button"
+          class="btn"
+          disabled={!canAmend}
+          title={amendDisabledReason}
+          onClick={onAmendHead}
+        >
+          <span class="codicon codicon-edit"></span>
+          <span>Amend HEAD date</span>
         </button>
 
         {inFlight && (

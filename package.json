@@ -1,10 +1,14 @@
 {
-  "name": "dev-extension",
-  "displayName": "Dev Display Name",
+  "name": "gitflux",
+  "displayName": "GitFlux",
   "description": "Stage selected files and commit them with a custom author and committer date.",
   "version": "0.1.0",
-  "publisher": "dev-publisher",
-  "license": "UNLICENSED",
+  "publisher": "advaetuc",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/advaetuc/GitFlux.git"
+  },
   "engines": {
     "vscode": "^1.90.0"
   },
@@ -35,19 +39,20 @@
     "lint": "eslint src test --max-warnings 0",
     "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.webview.json --noEmit",
     "test": "vitest run",
+    "test:coverage": "vitest run --coverage",
     "test:shell": "vitest run --dir test/shell-matrix",
     "test:integration": "vscode-test",
-    "package": "vsce package --allow-missing-repository --no-git-tag-version"
+    "package": "vsce package --no-git-tag-version"
   },
   "contributes": {
     "commands": [
       {
-        "command": "dev-extension.open",
+        "command": "gitflux.open",
         "title": "Commit With Custom Date…",
         "category": "Git"
       },
       {
-        "command": "dev-extension.openForSelection",
+        "command": "gitflux.openForSelection",
         "title": "Commit With Custom Date…",
         "category": "Git"
       }
@@ -56,7 +61,7 @@
       "scm": [
         {
           "type": "webview",
-          "id": "dev-extension.panel",
+          "id": "gitflux.panel",
           "name": "Commit With Custom Date",
           "when": "workspaceFolderCount > 0",
           "visibility": "collapsed"
@@ -66,31 +71,31 @@
     "menus": {
       "commandPalette": [
         {
-          "command": "dev-extension.open",
+          "command": "gitflux.open",
           "when": "workspaceFolderCount > 0"
         },
         {
-          "command": "dev-extension.openForSelection",
+          "command": "gitflux.openForSelection",
           "when": "false"
         }
       ],
       "explorer/context": [
         {
-          "command": "dev-extension.openForSelection",
+          "command": "gitflux.openForSelection",
           "when": "workspaceFolderCount > 0 && !explorerResourceIsRoot",
           "group": "7_modification@100"
         }
       ],
       "scm/resourceState/context": [
         {
-          "command": "dev-extension.openForSelection",
+          "command": "gitflux.openForSelection",
           "when": "scmProvider == git",
           "group": "1_modification@99"
         }
       ],
       "scm/resourceFolder/context": [
         {
-          "command": "dev-extension.openForSelection",
+          "command": "gitflux.openForSelection",
           "when": "scmProvider == git",
           "group": "1_modification@99"
         }
@@ -99,7 +104,7 @@
     "configuration": {
       "title": "Commit With Custom Date",
       "properties": {
-        "dev-extension.shell": {
+        "gitflux.shell": {
           "type": "string",
           "enum": [
             "auto",
@@ -114,24 +119,24 @@
           "default": "auto",
           "markdownDescription": "Shell dialect used for the Copy and Send to Terminal commands. `auto` follows the default terminal profile."
         },
-        "dev-extension.workingHours.start": {
+        "gitflux.workingHours.start": {
           "type": "string",
           "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$",
           "default": "09:30",
           "markdownDescription": "Start of the window used by **Random time in working hours** (24-hour `HH:MM`)."
         },
-        "dev-extension.workingHours.end": {
+        "gitflux.workingHours.end": {
           "type": "string",
           "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$",
           "default": "18:30",
           "markdownDescription": "End of the window used by **Random time in working hours** (24-hour `HH:MM`)."
         },
-        "dev-extension.push.defaultEnabled": {
+        "gitflux.push.defaultEnabled": {
           "type": "boolean",
           "default": false,
           "markdownDescription": "Whether the **Push after commit** option starts checked."
         },
-        "dev-extension.terminal.autoRun": {
+        "gitflux.terminal.autoRun": {
           "type": "boolean",
           "default": false,
           "scope": "application",
@@ -141,18 +146,19 @@
     }
   },
   "devDependencies": {
-    "typescript": "5.6.3",
-    "esbuild": "0.24.0",
-    "vitest": "2.1.3",
-    "fast-check": "3.22.0",
-    "eslint": "9.12.0",
-    "typescript-eslint": "8.9.0",
-    "@types/vscode": "1.90.0",
     "@types/node": "20.17.6",
+    "@types/vscode": "1.90.0",
+    "@vitest/coverage-v8": "2.1.3",
+    "@vscode/codicons": "0.0.36",
     "@vscode/test-cli": "0.0.10",
     "@vscode/test-electron": "2.4.1",
     "@vscode/vsce": "3.1.1",
+    "esbuild": "0.24.0",
+    "eslint": "9.12.0",
+    "fast-check": "3.22.0",
     "preact": "10.24.3",
-    "@vscode/codicons": "0.0.36"
+    "typescript": "5.6.3",
+    "typescript-eslint": "8.9.0",
+    "vitest": "2.1.3"
   }
 }

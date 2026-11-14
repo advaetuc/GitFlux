@@ -1,4 +1,6 @@
 import type {
+  AmendPlan,
+  AmendPlanInput,
   Blocker,
   BranchName,
   ChangedFile,
@@ -244,6 +246,62 @@ export function buildCommitPlan(input: PlanInput): Result<CommitPlan, PlanError>
       message: msgResult.value,
       timestamp: timeResult.value,
       ...(pushSpec ? { push: pushSpec } : {}),
+    },
+  };
+}
+
+/**
+ * Builds an AmendPlan for amending the HEAD commit date (Phase 5).
+ * Preconditions: blockers.length === 0, head.kind === "branch",
+ * resolveTimestamp succeeds, and isPublished === false.
+ */
+export function buildAmendPlan(input: AmendPlanInput): Result<AmendPlan, PlanError> {
+  if (input.blockers.length > 0) {
+    return {
+      ok: false,
+      error: {
+        code: "BLOCKED",
+        detail: `Operation blocked: ${input.blockers.join(", ")} in progress.`,
+      },
+    };
+  }
+
+  if (input.head.kind !== "branch") {
+    return {
+      ok: false,
+      error: {
+        code: "BLOCKED",
+        detail: "Amending HEAD date is only supported on a branch.",
+      },
+    };
+  }
+
+  if (input.isPublished) {
+    return {
+      ok: false,
+      error: {
+        code: "BLOCKED",
+        detail: "Commit is already on a remote; changing its date would require a force push (unsupported).",
+      },
+    };
+  }
+
+  const timeResult = resolveTimestamp(input.when.local, input.when.offsetMinutes);
+  if (!timeResult.ok) {
+    return {
+      ok: false,
+      error: {
+        code: "DATE_REJECTED",
+        detail: `Date rejected: ${timeResult.error}`,
+      },
+    };
+  }
+
+  return {
+    ok: true,
+    value: {
+      repoRoot: input.repoRoot,
+      timestamp: timeResult.value,
     },
   };
 }

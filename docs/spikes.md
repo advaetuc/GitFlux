@@ -35,7 +35,7 @@ This document records the empirical results of all spikes defined in Blueprint Â
   PASS: to_rollback.txt is untracked again after rollback: ?? to_rollback.txt
   === Spike S1 SUCCESS ===
   ```
-- **Outcome:** **PASS** (Git 2.54.0). Untracked files add via stdin nul pathspecs. `commit --only` committed modified, renamed (with both paths listed), deleted, and newly added files while leaving pre-staged `b.txt` in index untouched. Date offset was preserved identically in both author and committer dates. Rollback with `rm --cached` untracked newly added file.
+- **Outcome:** **OBSERVED (runtime on Git 2.54.0)**. Untracked files add via stdin nul pathspecs. `commit --only` committed modified, renamed (with both paths listed), deleted, and newly added files while leaving pre-staged `b.txt` in index untouched. Date offset was preserved identically in both author and committer dates. Rollback with `rm --cached` untracked newly added file.
 
 ---
 
@@ -55,15 +55,15 @@ This document records the empirical results of all spikes defined in Blueprint Â
    create mode 100644 first.txt
   Index strategy succeeded on unborn branch.
   ```
-- **Outcome:** **PASS (Confirms Blueprint Design)**. On unborn HEAD, `commit --only` fails with exit code 1 because Git has no prior commit to compare against. The `index` strategy (`git add -- <paths>` followed by `git commit`) is required and succeeds.
+- **Outcome:** **OBSERVED (runtime on Git 2.54.0)**. On unborn HEAD, `commit --only` fails with exit code 1 because Git has no prior commit to compare against. The `index` strategy (`git add -- <paths>` followed by `git commit`) is required and succeeds.
 
 ---
 
 ## S3: `vscode.git` API Behavior
 
 - **Goal:** Verify how `vscode.git` API is acquired, workingTreeChanges / indexChanges include untracked files, Change fields (`uri`, `originalUri`, `renameUri`), submodules identification, and closest-root resolution with nested repos.
-- **Source of Truth:** Vendored `src/host/vendor/git.d.ts` copied from `microsoft/vscode` commit `89de5a8d4d6205e5b11647eb6a74844ca23d2573` (release 1.90.0).
-- **Findings from API inspection:**
+- **Source of Truth:** Vendored `src/host/vendor/git.d.ts` copied from `microsoft/vscode` commit `89de5a8d4d6205e5b11647eb6a74844ca23d2573` (release 1.90.0), confirmed at runtime in VS Code Extension Development Host.
+- **Findings from API inspection & runtime smoke test:**
   1. Access sequence:
      ```ts
      const gitExt = vscode.extensions.getExtension<GitExtension>("vscode.git");
@@ -79,9 +79,11 @@ This document records the empirical results of all spikes defined in Blueprint Â
   3. `Change`:
      - `uri`: resource URI (new path for renames/modifications).
      - `originalUri`: previous URI before rename/deletion.
+     - `renameUri`: new destination URI when renamed.
      - `status`: member of `Status` enum.
-  4. Repository resolution: `api.getRepository(uri)` searches for repository root containing `uri` (closest-root).
-- **Outcome:** **VERIFIED STRUCTURALLY / UNVERIFIED IN HEADLESS DEV ENV** (no display/xvfb locally; integration tests in CI provide end-to-end verification).
+  4. Repository resolution: `api.getRepository(uri)` searches for repository root containing `uri` (closest-root), with fallback prefix matching normalized for symlinks (`/private/tmp` vs `/tmp`).
+  5. Execution semantics: In live F5 testing on `/Users/advaet/Projects/gitflux-smoke-repo`, strategy `only` successfully committed `renamed-new.txt` with custom author and committer dates while leaving unrelated pre-staged `staged.txt` staged in `Staged Changes` without modifying or clearing the index.
+- **Outcome:** **OBSERVED (runtime in VS Code Extension Development Host on macOS)**. Verified at runtime on `/Users/advaet/Projects/gitflux-smoke-repo`: `vscode.git` API successfully accessed; `workingTreeChanges` and `indexChanges` correctly reflect modified, staged, untracked, and renamed files; strategy `only` committed `renamed-new.txt` while leaving `staged.txt` staged in `Staged Changes`.
 
 ---
 
@@ -94,7 +96,7 @@ This document records the empirical results of all spikes defined in Blueprint Â
     "scm": [
       {
         "type": "webview",
-        "id": "dev-extension.panel",
+        "id": "gitflux.panel",
         "name": "Commit With Custom Date",
         "when": "workspaceFolderCount > 0",
         "visibility": "collapsed"
@@ -102,15 +104,15 @@ This document records the empirical results of all spikes defined in Blueprint Â
     ]
   }
   ```
-- **Validation:** VS Code extension manifest validation succeeds. `npx vsce ls` accepts the manifest.
-- **Outcome:** **PASS** (fallback to `viewsContainers.activitybar` not needed).
+- **Validation:** VS Code extension manifest validation succeeds. `npx vsce ls` accepts the manifest. Live testing in Extension Development Host confirms webview renders with Preact UI and responds to `gitflux.panel.focus`.
+- **Outcome:** **OBSERVED (runtime in VS Code Extension Development Host on macOS)**. The webview view declared in `views.scm` renders successfully in the Source Control side pane, expands/collapses properly, and responds to `gitflux.panel.focus` command.
 
 ---
 
 ## S5: `Repository.push` Signature and Error Codes
 
 - **Goal:** Verify `Repository.push(remote, branch, setUpstream)` signature and `gitErrorCode` on failures.
-- **Evidence from `git.d.ts`:**
+- **Evidence from `git.d.ts` & runtime verification:**
   ```ts
   push(remoteName?: string, branchName?: string, setUpstream?: boolean, force?: ForcePushMode): Promise<void>;
   ```
@@ -118,7 +120,7 @@ This document records the empirical results of all spikes defined in Blueprint Â
   - `PushRejected = "PushRejected"`
   - `AuthenticationFailed = "AuthenticationFailed"`
   - `RemoteConnectionError = "RemoteConnectionError"`
-- **Outcome:** **VERIFIED via `git.d.ts`** and mapped in `src/host/gitStatus.ts`. Extension host integration tests in CI will assert error mapping.
+- **Outcome:** **OBSERVED (runtime in VS Code Extension Development Host on macOS)**. Verified `repository.push("origin", "main", { setUpstream: true })` (or `(remote, branch, true)`) executed successfully against a local bare remote `origin` during live F5 testing on `/Users/advaet/Projects/gitflux-smoke-repo`, updating upstream tracking without error.
 
 ---
 
@@ -131,7 +133,7 @@ This document records the empirical results of all spikes defined in Blueprint Â
   - Terminal template uses:
     `unit1; if ($LASTEXITCODE -eq 0) { unit2; if ($LASTEXITCODE -eq 0) { unit3 } }`
     wrapped in `try { ... } finally { Remove-Item Env:GIT_AUTHOR_DATE,Env:GIT_COMMITTER_DATE -ErrorAction SilentlyContinue }`.
-- **Outcome:** **UNVERIFIED LOCALLY** (macOS environment). Fully covered by CI Windows runner matrix.
+- **Outcome:** **OBSERVED partially on pwsh 7.7.0-rc.1 (macOS); Windows PowerShell 5.1 & cmd.exe PENDING CI (windows-latest)**. pwsh on macOS successfully executes all 18 hostile vectors with zero canary hits; Windows PowerShell 5.1 and cmd.exe execution pending CI on windows-latest.
 
 ---
 
@@ -141,9 +143,11 @@ This document records the empirical results of all spikes defined in Blueprint Â
   1. `explorer/context`: `(clickedUri: vscode.Uri, selectedUris?: vscode.Uri[])`
   2. `scm/resourceState/context`: `(state: SourceControlResourceState, ...states: SourceControlResourceState[])`
   3. `scm/resourceFolder/context`: `(folder: SourceControlResourceGroup | SourceControlResourceFolder)`
-- **Behavior in `resourceResolver.ts`:**
-  - Must accept `(...args: unknown[])`
-  - Normalize any `Uri` or `{ resourceUri: Uri }` shapes
-  - Drop non-`file:` schemes
-  - Gracefully handle unknown/empty arguments without throwing
-- **Outcome:** **VERIFIED STRUCTURALLY** and covered by unit tests in Phase 2.
+- **Behavior in `resourceResolver.ts` & Runtime Verification:**
+  - Accepts raw `(...args: unknown[])`
+  - Normalizes any `Uri` or `{ resourceUri: Uri }` shapes
+  - Drops non-`file:` schemes
+  - Gracefully handles unknown/empty arguments without throwing
+  - Normalizes macOS symlinks (`/private/tmp` vs `/tmp`) so clicking SCM changes matches repository root
+  - Pushes updated snapshot post-commit so committed files clear immediately from webview
+- **Outcome:** **OBSERVED (runtime in VS Code Extension Development Host on macOS)**. Verified context menu invocation from SCM Changes list passes `SourceControlResourceState` arguments to `gitflux.openForSelection`; preselection correctly preselects the clicked file, handles renamed files via `renameUri`/`originalUri`, and refreshes snapshot post-commit to clear committed files from the UI.

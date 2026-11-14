@@ -94,6 +94,13 @@ export function App() {
     vscode.postMessage({ type: "sendToTerminal", requestId, draft: state.draft });
   };
 
+  const handleAmendHead = () => {
+    const requestId = `req-${String(nextRequestId++)}`;
+    activeRequestIdRef.current = requestId;
+    dispatch({ type: "START_RUN", step: "commit" });
+    vscode.postMessage({ type: "amendHead", requestId, draft: state.draft });
+  };
+
   const handleCancel = () => {
     if (activeRequestIdRef.current) {
       vscode.postMessage({ type: "cancel", requestId: activeRequestIdRef.current });
@@ -233,9 +240,12 @@ export function App() {
         inFlight={state.inFlight}
         currentStep={state.currentStep}
         lastResult={state.lastResult}
+        snapshot={state.snapshot}
+        when={state.draft.when}
         onCommit={handleCommit}
         onCopy={handleCopy}
         onSendToTerminal={handleSendToTerminal}
+        onAmendHead={handleAmendHead}
         onCancel={handleCancel}
         onSetDetachedAck={(acknowledged) => {
           dispatch({ type: "SET_DETACHED_ACK", acknowledged });

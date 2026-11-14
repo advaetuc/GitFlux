@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
-import { buildCommitPlan, type PlanInput } from "../../src/core/plan";
+import { buildCommitPlan, buildAmendPlan, type PlanInput } from "../../src/core/plan";
+import type { AmendPlanInput } from "../../src/core/types";
 
 describe("buildCommitPlan (AM-03)", () => {
   const baseInput: PlanInput = {
@@ -98,6 +99,21 @@ describe("buildCommitPlan (AM-03)", () => {
       // Both renamed.ts and old.ts should be in paths
       expect(res.value.paths).toEqual(["renamed.ts", "old.ts"]);
       expect(res.value.untrackedPaths).toEqual([]);
+    }
+  });
+
+  it("returns PATH_REJECTED if renamed file has invalid oldPath", () => {
+    const invalidRenameInput: PlanInput = {
+      ...baseInput,
+      files: [
+        { path: "renamed.ts", oldPath: "../escape.txt", kind: "renamed", staged: true, unstaged: false },
+      ],
+      selectedPaths: ["renamed.ts"],
+    };
+    const res = buildCommitPlan(invalidRenameInput);
+    expect(res.ok).toBe(false);
+    if (!res.ok) {
+      expect(res.error.code).toBe("PATH_REJECTED");
     }
   });
 
@@ -224,6 +240,84 @@ describe("buildCommitPlan (AM-03)", () => {
           branch: "feature",
           setUpstream: true,
         });
+      }
+    });
+  });
+
+  describe("buildAmendPlan (Phase 5)", () => {
+    const baseAmendInput: AmendPlanInput = {
+      repoRoot: "/workspace/repo",
+      head: { kind: "branch", name: "main", upstream: "origin/main", ahead: 1, behind: 0 },
+      blockers: [],
+      when: {
+        local: { year: 2026, month: 3, day: 2, hour: 10, minute: 41, second: 7 },
+        offsetMinutes: 330,
+      },
+      isPublished: false,
+    };
+
+    it("builds valid AmendPlan when all preconditions are satisfied", () => {
+      const res = buildAmendPlan(baseAmendInput);
+      expect(res.ok).toBe(true);
+      if (res.ok) {
+        expect(res.value.repoRoot).toBe("/workspace/repo");
+        expect(res.value.timestamp.iso).toBe("2026-03-02T10:41:07+0530");
+        expect(res.value.timestamp.offsetMinutes).toBe(330);
+      }
+    });
+
+    it("returns BLOCKED if blockers are present", () => {
+      const res = buildAmendPlan({ ...baseAmendInput, blockers: ["MERGE"] });
+      expect(res).toEqual({
+        ok: false,
+        error: { code: "BLOCKED", detail: "Operation blocked: MERGE in progress." },
+      });
+    });
+
+    it("returns BLOCKED if head is detached", () => {
+      const res = buildAmendPlan({
+        ...baseAmendInput,
+        head: { kind: "detached", shortSha: "abcdef0" },
+      });
+      expect(res).toEqual({
+        ok: false,
+        error: { code: "BLOCKED", detail: "Amending HEAD date is only supported on a branch." },
+      });
+    });
+
+    it("returns BLOCKED if head is unborn", () => {
+      const res = buildAmendPlan({
+        ...baseAmendInput,
+        head: { kind: "unborn", branch: "main" },
+      });
+      expect(res).toEqual({
+        ok: false,
+        error: { code: "BLOCKED", detail: "Amending HEAD date is only supported on a branch." },
+      });
+    });
+
+    it("returns BLOCKED if isPublished is true", () => {
+      const res = buildAmendPlan({ ...baseAmendInput, isPublished: true });
+      expect(res).toEqual({
+        ok: false,
+        error: {
+          code: "BLOCKED",
+          detail: "Commit is already on a remote; changing its date would require a force push (unsupported).",
+        },
+      });
+    });
+
+    it("returns DATE_REJECTED if timestamp is invalid", () => {
+      const res = buildAmendPlan({
+        ...baseAmendInput,
+        when: {
+          local: { year: 2026, month: 2, day: 31, hour: 10, minute: 0, second: 0 },
+          offsetMinutes: 0,
+        },
+      });
+      expect(res.ok).toBe(false);
+      if (!res.ok) {
+        expect(res.error.code).toBe("DATE_REJECTED");
       }
     });
   });

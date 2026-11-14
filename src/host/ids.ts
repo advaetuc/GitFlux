@@ -1,6 +1,6 @@
 // src/host/ids.ts — AM-07: Single source of IDs derived from EXTENSION_ID
 
-export const EXTENSION_ID = "dev-extension";
+export const EXTENSION_ID = "gitflux";
 
 export const COMMAND_OPEN = `${EXTENSION_ID}.open` as const;
 export const COMMAND_OPEN_FOR_SELECTION = `${EXTENSION_ID}.openForSelection` as const;

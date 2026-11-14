@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import { spawnSync, execFileSync } from "node:child_process";
 import { mkdtempSync, rmSync, writeFileSync, existsSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -112,17 +112,38 @@ describe("Shell-Matrix Hostile Vectors (§13.1 & AM-15, AM-18)", () => {
     { id: 15, name: "# not a comment", message: ["# not a comment"] },
   ];
 
+  beforeAll(() => {
+    const required = process.env.REQUIRE_SHELLS;
+    if (required) {
+      const list = required.split(",").map((s) => s.trim()).filter(Boolean);
+      for (const s of list) {
+        const bin = s === "powershell" ? "powershell.exe" : s === "cmd" ? "cmd.exe" : s;
+        expect(isShellAvailable(bin), `Required shell "${s}" is not available on PATH`).toBe(true);
+      }
+    }
+  });
+
+  afterAll(() => {
+    const summary = shells.map((sh) => {
+      const bin = sh === "powershell" ? "powershell.exe" : sh === "cmd" ? "cmd.exe" : sh;
+      const available = isShellAvailable(bin);
+      return {
+        shell: sh,
+        available: available ? "YES" : "NO",
+        executed: available ? 18 : 0,
+        skipped: available ? 0 : 18,
+      };
+    });
+    console.log("\n--- Shell Matrix Summary ---");
+    console.table(summary);
+  });
+
   for (const sh of shells) {
     const available = isShellAvailable(sh === "powershell" ? "powershell.exe" : sh === "cmd" ? "cmd.exe" : sh);
 
-    describe(`Shell: ${sh} (available: ${available ? "YES" : "NO"})`, () => {
+    describe.skipIf(!available)(`Shell: ${sh} (available: ${available ? "YES" : "NO"})`, () => {
       for (const vec of vectors) {
         it(`vector ${String(vec.id)}: ${vec.name}`, () => {
-          if (!available) {
-            // Documented UNVERIFIED in local environment
-            return;
-          }
-
           const shouldReject = vec.expectedRejectedShells?.includes(sh) ?? false;
           const repoDir = createFixtureRepo();
 
@@ -215,8 +236,6 @@ describe("Shell-Matrix Hostile Vectors (§13.1 & AM-15, AM-18)", () => {
 
       // Vector 20: literal pathspec with hostile filename
       it("vector 20: literal pathspec with spaces, quotes, and special characters", () => {
-        if (!available) return;
-
         const repoDir = createFixtureRepo();
         try {
           const hostileName = "sp ace_quote'd.txt";

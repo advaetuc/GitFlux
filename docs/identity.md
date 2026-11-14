@@ -1,27 +1,14 @@
 # Identity Tokens (AM-07)
 
-The Blueprint uses placeholder tokens. Since `npm` and `vsce` reject angle-bracket
-tokens in `name`/`publisher` fields, the following neutral working values are used
-throughout the codebase:
+The Blueprint uses placeholder tokens. During initial development, neutral working values were used per AM-07. The production identity, licensing, and repository metadata have now been fully applied across the project:
 
-| Blueprint Token | Working Value | Used In |
+| Blueprint Token | Production Value | Used In |
 |---|---|---|
-| `<project-slug>` | `dev-extension` | `package.json#name`, `EXTENSION_ID` in `ids.ts` |
-| `<publisher-id>` | `dev-publisher` | `package.json#publisher` |
-| `<extension-id>` | `dev-extension` | All `contributes.*` prefixes, command IDs, view IDs, config keys |
-| `<display-name>` | `Dev Display Name` | `package.json#displayName` |
-| `<license>` | `UNLICENSED` | `package.json#license` |
+| `<project-slug>` | `gitflux` | `package.json#name`, `package-lock.json`, `EXTENSION_ID` in `ids.ts` |
+| `<publisher-id>` | `advaetuc` | `package.json#publisher` |
+| `<extension-id>` | `gitflux` | All `contributes.*` prefixes, command IDs, view IDs, config keys |
+| `<display-name>` | `GitFlux` | `package.json#displayName`, `README.md` |
+| `<license>` | `MIT` | `package.json#license`, `LICENSE`, `package-lock.json` |
+| `<repository>` | `https://github.com/advaetuc/GitFlux.git` | `package.json#repository` |
 
-## Find/Replace Map for Owner
-
-To replace with real values, find and replace these exact strings:
-
-```
-dev-extension    → your-chosen-slug (in package.json name, all contributes.* prefixes, ids.ts EXTENSION_ID)
-dev-publisher    → your-marketplace-publisher-id
-Dev Display Name → Your Extension Display Name
-UNLICENSED       → your-chosen-license (e.g. MIT)
-```
-
-All command IDs, view IDs, and configuration keys are derived from `EXTENSION_ID`
-in `src/host/ids.ts`. Changing the constant there and `package.json` is sufficient.
+All command IDs, view IDs, and configuration keys are derived from `EXTENSION_ID` in `src/host/ids.ts`.

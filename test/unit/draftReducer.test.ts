@@ -179,4 +179,62 @@ describe("draftReducer (Phase 3)", () => {
     expect(totalMinutes).toBeGreaterThanOrEqual(570);
     expect(totalMinutes).toBeLessThanOrEqual(1110);
   });
+
+  it("accepts SNAPSHOT when activeRepoId is empty and populates repos", () => {
+    expect(initialState.activeRepoId).toBe("");
+
+    const s = draftReducer(initialState, {
+      type: "SNAPSHOT",
+      snapshot: sampleSnapshot,
+    });
+
+    expect(s.activeRepoId).toBe(sampleSnapshot.repoId);
+    expect(s.snapshot).toEqual(sampleSnapshot);
+    expect(s.repos).toEqual([{ repoId: sampleSnapshot.repoId, name: sampleSnapshot.name }]);
+    expect(s.draft.repoId).toBe(sampleSnapshot.repoId);
+  });
+
+  it("preserves valid preselected paths when SNAPSHOT arrives", () => {
+    // Suppose PRESELECT arrived first
+    const preselectedState = draftReducer(initialState, {
+      type: "PRESELECT",
+      repoId: sampleSnapshot.repoId,
+      paths: ["src/a.ts"],
+      droppedCount: 0,
+    });
+    expect(preselectedState.activeRepoId).toBe(sampleSnapshot.repoId);
+    expect(preselectedState.draft.paths).toEqual(["src/a.ts"]);
+
+    // Now SNAPSHOT arrives
+    const s = draftReducer(preselectedState, {
+      type: "SNAPSHOT",
+      snapshot: sampleSnapshot,
+    });
+    expect(s.draft.paths).toEqual(["src/a.ts"]);
+  });
+
+  it("switches activeRepoId on cross-repo PRESELECT", () => {
+    const s1 = draftReducer(initialState, {
+      type: "INIT",
+      env: sampleEnv,
+      repos: [
+        { repoId: "/workspace/repo1", name: "repo1" },
+        { repoId: "/workspace/repo2", name: "repo2" },
+      ],
+      activeRepoId: "/workspace/repo1",
+      snapshot: sampleSnapshot,
+    });
+
+    const s2 = draftReducer(s1, {
+      type: "PRESELECT",
+      repoId: "/workspace/repo2",
+      paths: ["other/file.ts"],
+      droppedCount: 1,
+    });
+
+    expect(s2.activeRepoId).toBe("/workspace/repo2");
+    expect(s2.draft.repoId).toBe("/workspace/repo2");
+    expect(s2.draft.paths).toEqual(["other/file.ts"]);
+    expect(s2.stalePathsNotice).toMatch(/1 file was dropped/i);
+  });
 });

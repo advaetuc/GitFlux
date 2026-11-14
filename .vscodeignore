@@ -5,6 +5,7 @@ src/
 test/
 docs/
 out/
+coverage/
 *.ts
 *.mjs
 tsconfig*.json
@@ -12,3 +13,5 @@ vitest.config.ts
 eslint.config.mjs
 .gitignore
 .github/
+.DS_Store
+*.zip
