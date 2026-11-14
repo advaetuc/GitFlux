@@ -1,6 +1,6 @@
 import { execFile } from "node:child_process";
 import type { ExecFileOptionsWithStringEncoding } from "node:child_process";
-import type { AmendPlan, CommitPlan } from "../core/types";
+import type { AmendPlan, CommitPlan, Result } from "../core/types";
 import { buildAmendExecPlan, buildExecPlan } from "../core/execPlan";
 import type { ActionResult, ErrorCode, RunStepId } from "../shared/protocol";
 import { GitErrorCodes } from "./gitStatus";
@@ -20,6 +20,7 @@ export interface RunGitResult {
   code: number;
   stdout: string;
   stderr: string;
+  killed?: boolean;
 }
 
 const mutexesByRepo = new Map<string, Promise<void>>();
@@ -146,12 +147,14 @@ export function runGit(
       const outStr = typeof stdout === "string" ? stdout : "";
       const errStr = typeof stderr === "string" ? stderr : "";
       const exitCode = err ? (typeof err.code === "number" ? err.code : 1) : 0;
+      const isTimeout = Boolean(err && (err.killed || err.signal === "SIGTERM"));
 
       resolve({
         ok: !err,
         code: exitCode,
         stdout: outStr,
         stderr: errStr,
+        killed: isTimeout,
       });
     });
 
@@ -166,6 +169,25 @@ export function runGit(
       child.stdin.end();
     }
   });
+}
+
+/**
+ * Executes a read-only git command without mutex or retry.
+ * Returns { ok: true, value: stdout } or { ok: false, error: "NONZERO" | "TIMEOUT" }.
+ */
+export async function readGit(
+  gitPath: string,
+  repoRoot: string,
+  argv: readonly string[],
+): Promise<Result<string, "NONZERO" | "TIMEOUT">> {
+  const res = await runGit(gitPath, argv, { cwd: repoRoot, timeoutMs: 10_000 });
+  if (res.ok) {
+    return { ok: true, value: res.stdout };
+  }
+  if (res.killed) {
+    return { ok: false, error: "TIMEOUT" };
+  }
+  return { ok: false, error: "NONZERO" };
 }
 
 /**

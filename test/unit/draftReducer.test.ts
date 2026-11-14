@@ -237,4 +237,100 @@ describe("draftReducer (Phase 3)", () => {
     expect(s2.draft.paths).toEqual(["other/file.ts"]);
     expect(s2.stalePathsNotice).toMatch(/1 file was dropped/i);
   });
+
+  it("drops ACTIVITY for a non-active repoId and accepts for active repoId", () => {
+    const s1 = draftReducer(initialState, {
+      type: "INIT",
+      env: sampleEnv,
+      repos: [{ repoId: "/workspace/repo", name: "repo" }],
+      activeRepoId: "/workspace/repo",
+      snapshot: sampleSnapshot,
+    });
+
+    // Activity for different repo -> dropped
+    const s2 = draftReducer(s1, {
+      type: "ACTIVITY",
+      repoId: "/workspace/other-repo",
+      email: "other@example.com",
+      dayCounts: { "2026-03-04": 2 },
+    });
+    expect(s2.activity).toBeUndefined();
+
+    // Activity for active repo -> stored
+    const s3 = draftReducer(s1, {
+      type: "ACTIVITY",
+      repoId: "/workspace/repo",
+      email: "me@example.com",
+      dayCounts: { "2026-03-04": 5 },
+    });
+    expect(s3.activity).toEqual({
+      email: "me@example.com",
+      dayCounts: { "2026-03-04": 5 },
+    });
+  });
+
+  it("clears activity when switching repositories via SET_REPO", () => {
+    const s1 = draftReducer(initialState, {
+      type: "INIT",
+      env: sampleEnv,
+      repos: [
+        { repoId: "/workspace/repo1", name: "repo1" },
+        { repoId: "/workspace/repo2", name: "repo2" },
+      ],
+      activeRepoId: "/workspace/repo1",
+      snapshot: sampleSnapshot,
+    });
+
+    const s2 = draftReducer(s1, {
+      type: "ACTIVITY",
+      repoId: "/workspace/repo1",
+      email: "me@example.com",
+      dayCounts: { "2026-03-04": 1 },
+    });
+    expect(s2.activity).toBeDefined();
+
+    const s3 = draftReducer(s2, {
+      type: "SET_REPO",
+      repoId: "/workspace/repo2",
+    });
+    expect(s3.activity).toBeUndefined();
+  });
+
+  it("SET_DATE_FROM_HEAT updates only year/month/day, preserves hour/minute/second, and recomputes offsetMinutes in local mode", () => {
+    const s1 = draftReducer(initialState, {
+      type: "INIT",
+      env: sampleEnv,
+      repos: [{ repoId: "/workspace/repo", name: "repo" }],
+      activeRepoId: "/workspace/repo",
+      snapshot: sampleSnapshot,
+    });
+
+    // Set specific time first
+    const s2 = draftReducer(s1, {
+      type: "SET_TIME",
+      hour: 14,
+      minute: 25,
+      second: 36,
+    });
+    expect(s2.draft.when.local.hour).toBe(14);
+    expect(s2.draft.when.local.minute).toBe(25);
+    expect(s2.draft.when.local.second).toBe(36);
+    expect(s2.offsetMode).toBe("local");
+
+    // Dispatch SET_DATE_FROM_HEAT
+    const s3 = draftReducer(s2, {
+      type: "SET_DATE_FROM_HEAT",
+      date: "2026-11-20",
+    });
+
+    expect(s3.draft.when.local.year).toBe(2026);
+    expect(s3.draft.when.local.month).toBe(11);
+    expect(s3.draft.when.local.day).toBe(20);
+    // Preserves hour, minute, second
+    expect(s3.draft.when.local.hour).toBe(14);
+    expect(s3.draft.when.local.minute).toBe(25);
+    expect(s3.draft.when.local.second).toBe(36);
+    // Recomputes offsetMinutes
+    expect(typeof s3.draft.when.offsetMinutes).toBe("number");
+  });
 });

@@ -85,18 +85,25 @@ The repository maintains an authoritative set of markdown records under `docs/`:
 
 ---
 
-## 4. Prioritized v0.2.0+ Roadmap
+## 4. Completed v0.2.0 Deliverables
+
+- **Milestone A (Honest Positioning & Release Automation):**
+  - Honest streak positioning and safety claims sections in `README.md`.
+  - Comprehensive behavioral safety claims test suite (`test/unit/safetyClaims.test.ts`).
+  - Reusable CI workflow and tag-driven OIDC release automation (`.github/workflows/publish.yml`).
+- **Milestone B (Streak-Gap Picker & Readiness Checklist):**
+  - Pure 12-week UTC heatmap core (`src/core/heatmap.ts`) and UTC day shift warning (`src/core/warnings.ts`).
+  - Read-only Git activity service (`src/host/activity.ts`) with memoized caching.
+  - Interactive Preact streak grid (`StreakGrid.tsx`) with zero-JS native `<details>` readiness checklist (`ReadinessChecklist.tsx`).
+
+---
+
+## 5. Prioritized v0.2.1+ Roadmap
 
 For subsequent iterations and feature releases, prioritize work in this order:
 
 1. **Custom Extension Logo / Icon:**
-   - Design a crisp 128×128 or 256×256 PNG/SVG logo representing Git Flux (e.g. clock + git commit node).
-   - Add `"icon": "docs/assets/icon.png"` in `package.json` and include in `.vscodeignore` allowlist.
-2. **Optional 1-Year Contribution Heatmap (Blueprint §14.1):**
-   - Asynchronously query commit history (`git log --format="%ad" --date=short`) off the hot path.
-   - Render a collapsed, lightweight SVG or canvas contribution grid in the webview to show historical context before picking a date.
-3. **Automated GitHub Actions Trusted Publishing:**
-   - Add a `.github/workflows/publish.yml` triggered on git release tags (`v*.*.*`).
-   - Use VS Code Marketplace personal access tokens or OpenID Connect (OIDC) to publish releases automatically.
-4. **Internationalization & Localization (`package.nls.json`):**
+   - Design a crisp 128×128 or 256×256 PNG/SVG logo representing GitFlux (e.g. clock + git commit node).
+   - Add `"icon": "resources/icon.png"` in `package.json` and include in `.vscodeignore` allowlist.
+2. **Internationalization & Localization (`package.nls.json`):**
    - Extract user-facing string literals from `package.json` and UI components into localization bundles.

@@ -10,6 +10,8 @@ import { MessageFields } from "./components/MessageFields";
 import { PushFields } from "./components/PushFields";
 import { CommandPreview } from "./components/CommandPreview";
 import { ActionBar } from "./components/ActionBar";
+import { StreakGrid } from "./components/StreakGrid";
+import { ReadinessChecklist } from "./components/ReadinessChecklist";
 
 let nextRequestId = 1;
 
@@ -58,6 +60,14 @@ export function App() {
             activeRequestIdRef.current = undefined;
             dispatch({ type: "RESULT", result: msg.result });
           }
+          break;
+        case "activity":
+          dispatch({
+            type: "ACTIVITY",
+            repoId: msg.repoId,
+            ...(msg.email !== undefined ? { email: msg.email } : {}),
+            ...(msg.dayCounts !== undefined ? { dayCounts: msg.dayCounts } : {}),
+          });
           break;
       }
     };
@@ -160,6 +170,18 @@ export function App() {
         }}
         onFilterChange={(filterText) => {
           dispatch({ type: "SET_FILTER", filterText });
+        }}
+      />
+
+      {/* GitHub Contribution Readiness Checklist */}
+      <ReadinessChecklist email={state.activity?.email} />
+
+      {/* Contribution Activity Streak Grid */}
+      <StreakGrid
+        dayCounts={state.activity?.dayCounts}
+        local={state.draft.when.local}
+        onSelectDate={(date) => {
+          dispatch({ type: "SET_DATE_FROM_HEAT", date });
         }}
       />
 

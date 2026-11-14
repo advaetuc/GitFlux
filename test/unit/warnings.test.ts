@@ -1,6 +1,17 @@
 import { describe, it, expect } from "vitest";
-import { planWarnings } from "../../src/core/warnings";
-import type { CommitPlan, GitPath, HeadState, ChangedFile, RemoteName, BranchName } from "../../src/core/types";
+import {
+  planWarnings,
+  formatUtcDayShiftWarning,
+  classifyEmail,
+} from "../../src/core/warnings";
+import type {
+  CommitPlan,
+  GitPath,
+  HeadState,
+  ChangedFile,
+  RemoteName,
+  BranchName,
+} from "../../src/core/types";
 
 describe("planWarnings (AM-04)", () => {
   const basePlan: CommitPlan = {
@@ -136,5 +147,131 @@ describe("planWarnings (AM-04)", () => {
       nowEpochSeconds: 1718452800,
     });
     expect(warnings).toEqual([]);
+  });
+
+  describe("UTC_DAY_SHIFT and formatUtcDayShiftWarning", () => {
+    const shiftCases = [
+      {
+        name: "offset -720 (-12:00) with UTC shift to next day",
+        local: { year: 2026, month: 3, day: 2, hour: 20, minute: 0, second: 0 },
+        offsetMinutes: -720,
+        epochSeconds: 1772524800, // 2026-03-03 08:00:00 UTC
+        expectedShift: true,
+        expectedUtc: "2026-03-03",
+      },
+      {
+        name: "offset -720 (-12:00) without UTC shift (same day)",
+        local: { year: 2026, month: 3, day: 2, hour: 4, minute: 0, second: 0 },
+        offsetMinutes: -720,
+        epochSeconds: 1772467200, // 2026-03-02 16:00:00 UTC
+        expectedShift: false,
+        expectedUtc: "2026-03-02",
+      },
+      {
+        name: "offset +330 (+05:30) with UTC shift to previous day",
+        local: { year: 2026, month: 3, day: 2, hour: 2, minute: 0, second: 0 },
+        offsetMinutes: 330,
+        epochSeconds: 1772397000, // 2026-03-01 20:30:00 UTC
+        expectedShift: true,
+        expectedUtc: "2026-03-01",
+      },
+      {
+        name: "offset +330 (+05:30) without UTC shift (same day)",
+        local: { year: 2026, month: 3, day: 2, hour: 14, minute: 0, second: 0 },
+        offsetMinutes: 330,
+        epochSeconds: 1772440200, // 2026-03-02 08:30:00 UTC
+        expectedShift: false,
+        expectedUtc: "2026-03-02",
+      },
+      {
+        name: "offset +840 (+14:00) with UTC shift to previous day",
+        local: { year: 2026, month: 3, day: 2, hour: 6, minute: 0, second: 0 },
+        offsetMinutes: 840,
+        epochSeconds: 1772380800, // 2026-03-01 16:00:00 UTC
+        expectedShift: true,
+        expectedUtc: "2026-03-01",
+      },
+      {
+        name: "offset +840 (+14:00) without UTC shift (same day)",
+        local: { year: 2026, month: 3, day: 2, hour: 20, minute: 0, second: 0 },
+        offsetMinutes: 840,
+        epochSeconds: 1772431200, // 2026-03-02 06:00:00 UTC
+        expectedShift: false,
+        expectedUtc: "2026-03-02",
+      },
+    ];
+
+    for (const tc of shiftCases) {
+      it(`evaluates ${tc.name}`, () => {
+        const plan: CommitPlan = {
+          ...basePlan,
+          timestamp: {
+            iso: "2026-03-02T...±...",
+            epochSeconds: tc.epochSeconds,
+            offsetMinutes: tc.offsetMinutes,
+          },
+        };
+
+        // Test with localDateStr
+        const warningsWithStr = planWarnings({
+          plan,
+          head: baseHead,
+          files: baseFiles,
+          headCommitEpochSeconds: 1000,
+          nowEpochSeconds: tc.epochSeconds,
+          localDateStr: "2026-03-02",
+        });
+
+        if (tc.expectedShift) {
+          expect(warningsWithStr).toContain("UTC_DAY_SHIFT");
+          expect(formatUtcDayShiftWarning(tc.epochSeconds)).toBe(
+            `GitHub will show this on ${tc.expectedUtc} (UTC).`,
+          );
+        } else {
+          expect(warningsWithStr).not.toContain("UTC_DAY_SHIFT");
+        }
+
+        // Test with whenLocal
+        const warningsWithLocal = planWarnings({
+          plan,
+          head: baseHead,
+          files: baseFiles,
+          headCommitEpochSeconds: 1000,
+          nowEpochSeconds: tc.epochSeconds,
+          whenLocal: tc.local,
+        });
+
+        if (tc.expectedShift) {
+          expect(warningsWithLocal).toContain("UTC_DAY_SHIFT");
+        } else {
+          expect(warningsWithLocal).not.toContain("UTC_DAY_SHIFT");
+        }
+      });
+    }
+  });
+
+  describe("classifyEmail", () => {
+    it("identifies missing emails", () => {
+      expect(classifyEmail(undefined)).toBe("missing");
+      expect(classifyEmail("")).toBe("missing");
+      expect(classifyEmail("   ")).toBe("missing");
+    });
+
+    it("identifies generic and local host emails", () => {
+      expect(classifyEmail("user")).toBe("generic");
+      expect(classifyEmail("user@localhost")).toBe("generic");
+      expect(classifyEmail("user@internal-server")).toBe("generic");
+      expect(classifyEmail("user@myhost.local")).toBe("generic");
+      expect(classifyEmail("user@workstation.localdomain")).toBe("generic");
+      expect(classifyEmail("user@build.(none)")).toBe("generic");
+      expect(classifyEmail("root@sub.host.local")).toBe("generic");
+    });
+
+    it("identifies valid emails", () => {
+      expect(classifyEmail("user@example.com")).toBe("ok");
+      expect(classifyEmail("advaet@users.noreply.github.com")).toBe("ok");
+      expect(classifyEmail("dev.team@company.org")).toBe("ok");
+      expect(classifyEmail("test@domain.co.uk")).toBe("ok");
+    });
   });
 });

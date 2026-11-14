@@ -202,13 +202,15 @@ describe("Phase 3 Gate Verifications", () => {
     expect(htmlContent).not.toMatch(/\son[a-z]+\s*=/i);
   });
 
+  const WEBVIEW_GZIP_BASELINE_BYTES = 14424;
+
   it("webview bundle gzip size is under 60 KB budget", () => {
     const bundlePath = path.resolve(__dirname, "../../dist/webview/main.js");
-    if (fs.existsSync(bundlePath)) {
-      const content = fs.readFileSync(bundlePath);
-      const gzipped = zlib.gzipSync(content);
-      expect(gzipped.length).toBeLessThan(60 * 1024);
-    }
+    expect(fs.existsSync(bundlePath)).toBe(true);
+    const content = fs.readFileSync(bundlePath);
+    const gzipped = zlib.gzipSync(content);
+    expect(gzipped.length).toBeLessThan(60 * 1024);
+    expect(gzipped.length).toBeLessThanOrEqual(WEBVIEW_GZIP_BASELINE_BYTES + 4096);
   });
 
   it("webview bundle uses Preact automatic JSX runtime and never emits React.createElement", () => {

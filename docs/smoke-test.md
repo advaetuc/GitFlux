@@ -143,3 +143,21 @@ When launched with F5, `GITFLUX_SPIKE_LOG="1"` is set. Open the **Output** panel
   1. `Repository.state entries on snapshot build` logs all file changes, original URIs, and status codes.
   2. `openForSelection raw arguments` logs the exact argument vectors from Explorer and SCM menus.
   3. `repository.push error properties` logs error codes on simulated push failures.
+
+---
+
+## 13. Streak-Gap Picker & Readiness Checklist
+
+- **Setup:** Open a Git repository configured with `user.email` (e.g. `user@example.com`). Ensure multiple commits exist over past weeks.
+- **Action:** Open the `Commit With Custom Date` panel.
+- **Expected:**
+  - **Readiness Checklist (`<details>`):**
+    - Summarizes `"Committing as: user@example.com"` with a `"GitHub Checklist"` pill.
+    - If email is generic or missing (e.g. `.local` or unset), a warning advisory prompts configuring `git config user.email`.
+    - Clicking summary expands the static 5-point contribution eligibility checklist.
+  - **Streak Grid (Contribution Activity Heatmap):**
+    - 12-week × 7-day grid renders past commit activity.
+    - Sunday is row 0, Saturday is row 6; current day sits in the final column at its exact UTC weekday.
+    - Future days after today are disabled.
+    - Hovering any cell shows tooltip with date and commit count (e.g. `"2026-11-02 (UTC), 2 commits"`).
+    - Clicking any past/present cell updates the date fields (`year/month/day`), keeps current time fields untouched, and highlights the selected cell with an outline.

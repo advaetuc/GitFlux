@@ -1,7 +1,7 @@
 import type { ActionResult, HostEnv, RepoSnapshot, RunStepId } from "../../shared/protocol";
 import type { CommitPlan, LocalDateTime, Result, ShellSetting } from "../../core/types";
 import type { PlanError } from "../../core/plan";
-import type { PlanWarning } from "../../core/warnings";
+import { formatUtcDayShiftWarning, type PlanWarning } from "../../core/warnings";
 import { resolveTimestamp } from "../../core/timestamp";
 import { resolveEffectiveShell } from "../draftReducer";
 
@@ -117,7 +117,14 @@ export function ActionBar({
       {warnings.length > 0 && (
         <div class="banner banner-warning">
           <span class="banner-text">
-            Warnings: {warnings.join(", ")}
+            Warnings:{" "}
+            {warnings
+              .map((w) =>
+                w === "UTC_DAY_SHIFT" && plan.ok
+                  ? formatUtcDayShiftWarning(plan.value.timestamp.epochSeconds)
+                  : w,
+              )
+              .join(", ")}
           </span>
         </div>
       )}

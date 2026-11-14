@@ -291,3 +291,141 @@ textarea {
   color: var(--vscode-badge-foreground);
   font-weight: 600;
 }
+
+/* Streak Grid (Contribution Activity Heatmap) */
+.heat-grid-container {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  overflow-x: auto;
+  padding: 2px 0;
+}
+
+.heat-grid-header {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--vscode-descriptionForeground);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.heat-grid {
+  display: grid;
+  grid-auto-flow: column;
+  grid-template-rows: repeat(7, 10px);
+  grid-auto-columns: 10px;
+  gap: 3px;
+  width: max-content;
+}
+
+.heat-cell {
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+  border: 1px solid transparent;
+  padding: 0;
+  margin: 0;
+  cursor: pointer;
+  background-color: var(--vscode-editor-lineHighlightBackground, rgba(128, 128, 128, 0.15));
+}
+
+.heat-cell:focus {
+  outline: 1px solid var(--vscode-focusBorder);
+}
+
+.heat-cell:disabled {
+  cursor: default;
+  opacity: 0.25;
+}
+
+.level-0 {
+  background-color: var(--vscode-editor-lineHighlightBackground, rgba(128, 128, 128, 0.15));
+}
+
+.level-1 {
+  background-color: var(--vscode-charts-green, var(--vscode-gitDecoration-addedResourceForeground, #2ea043));
+  opacity: 0.4;
+}
+
+.level-2 {
+  background-color: var(--vscode-charts-green, var(--vscode-gitDecoration-addedResourceForeground, #2ea043));
+  opacity: 0.65;
+}
+
+.level-3 {
+  background-color: var(--vscode-charts-green, var(--vscode-gitDecoration-addedResourceForeground, #2ea043));
+  opacity: 0.85;
+}
+
+.level-4 {
+  background-color: var(--vscode-charts-green, var(--vscode-gitDecoration-addedResourceForeground, #2ea043));
+  opacity: 1;
+}
+
+.heat-cell-selected {
+  border-color: var(--vscode-focusBorder, #007acc) !important;
+  outline: 1px solid var(--vscode-focusBorder, #007acc);
+}
+
+body.vscode-high-contrast .heat-cell {
+  border: 1px solid var(--vscode-contrastBorder, #fff);
+}
+
+/* Readiness Checklist (<details>) */
+.readiness-details {
+  border: 1px solid var(--vscode-input-border, rgba(128, 128, 128, 0.2));
+  border-radius: 3px;
+  background-color: var(--vscode-sideBar-background, transparent);
+  font-size: 11px;
+}
+
+.readiness-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 8px;
+  cursor: pointer;
+  user-select: none;
+  font-weight: 500;
+  color: var(--vscode-foreground);
+}
+
+.readiness-summary:focus {
+  outline: 1px solid var(--vscode-focusBorder);
+}
+
+.readiness-title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.readiness-badge {
+  font-size: 10px;
+  padding: 1px 5px;
+  border-radius: 2px;
+  background-color: var(--vscode-badge-background);
+  color: var(--vscode-badge-foreground);
+  margin-left: 6px;
+}
+
+.readiness-advisory {
+  padding: 6px 8px;
+  margin: 4px 8px;
+  border-radius: 2px;
+  background-color: var(--vscode-inputValidation-warningBackground, rgba(255, 204, 0, 0.15));
+  color: var(--vscode-inputValidation-warningForeground, inherit);
+  border: 1px solid var(--vscode-inputValidation-warningBorder, rgba(255, 204, 0, 0.3));
+}
+
+.readiness-list {
+  margin: 0;
+  padding: 6px 8px 8px 24px;
+  color: var(--vscode-descriptionForeground);
+  line-height: 1.5;
+}
+
+.readiness-list li {
+  margin-bottom: 2px;
+}

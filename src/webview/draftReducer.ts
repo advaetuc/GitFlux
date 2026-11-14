@@ -41,6 +41,12 @@ export interface DraftState {
   readonly plan: Result<CommitPlan, PlanError>;
   readonly warnings: readonly PlanWarning[];
   readonly preview: string;
+  readonly activity:
+    | {
+        readonly email?: string;
+        readonly dayCounts?: Readonly<Record<string, number>>;
+      }
+    | undefined;
 }
 
 export type DraftAction =
@@ -48,6 +54,8 @@ export type DraftAction =
   | { readonly type: "SNAPSHOT"; readonly snapshot: RepoSnapshot }
   | { readonly type: "PRESELECT"; readonly repoId: string; readonly paths: readonly string[]; readonly droppedCount: number }
   | { readonly type: "SET_REPO"; readonly repoId: string }
+  | { readonly type: "ACTIVITY"; readonly repoId: string; readonly email?: string; readonly dayCounts?: Readonly<Record<string, number>> }
+  | { readonly type: "SET_DATE_FROM_HEAT"; readonly date: string }
   | { readonly type: "TOGGLE_PATH"; readonly path: string }
   | { readonly type: "SELECT_ALL_PATHS"; readonly select: boolean }
   | { readonly type: "SET_FILTER"; readonly filterText: string }
@@ -162,6 +170,7 @@ export function deriveDerivedState(
         files: snapshot.files,
         headCommitEpochSeconds: snapshot.headCommitEpochSeconds,
         nowEpochSeconds,
+        whenLocal: draft.when.local,
       })
     : [];
 
@@ -217,6 +226,7 @@ export const initialState: DraftState = {
   plan: { ok: false, error: { code: "BLOCKED", detail: "Initializing..." } },
   warnings: [],
   preview: "Initializing...",
+  activity: undefined,
 };
 
 export function draftReducer(state: DraftState, action: DraftAction): DraftState {
@@ -234,6 +244,7 @@ export function draftReducer(state: DraftState, action: DraftAction): DraftState
         activeRepoId,
         snapshot,
         draft,
+        activity: undefined,
         ...derived,
       };
     }
@@ -322,9 +333,21 @@ export function draftReducer(state: DraftState, action: DraftAction): DraftState
         activeRepoId: action.repoId,
         snapshot: undefined,
         draft: newDraft,
+        activity: undefined,
         stalePathsNotice: undefined,
         detachedHeadAcknowledged: false,
         ...derived,
+      };
+    }
+
+    case "ACTIVITY": {
+      if (action.repoId !== state.activeRepoId) return state;
+      return {
+        ...state,
+        activity: {
+          ...(action.email !== undefined ? { email: action.email } : {}),
+          ...(action.dayCounts !== undefined ? { dayCounts: action.dayCounts } : {}),
+        },
       };
     }
 
@@ -355,6 +378,45 @@ export function draftReducer(state: DraftState, action: DraftAction): DraftState
         year: action.year,
         month: action.month,
         day: action.day,
+      };
+
+      let newOffset = state.draft.when.offsetMinutes;
+      if (state.offsetMode === "local") {
+        const offsetRes = localOffsetMinutesAt(newLocal);
+        if (offsetRes.ok) {
+          newOffset = offsetRes.value;
+        }
+      }
+
+      const newDraft: CommitDraft = {
+        ...state.draft,
+        when: { local: newLocal, offsetMinutes: newOffset },
+      };
+      const derived = deriveDerivedState(state.snapshot, newDraft, state.env);
+      return { ...state, draft: newDraft, ...derived };
+    }
+
+    case "SET_DATE_FROM_HEAT": {
+      const parts = action.date.split("-").map((s) => parseInt(s, 10));
+      const year = parts[0];
+      const month = parts[1];
+      const day = parts[2];
+      if (
+        year === undefined ||
+        month === undefined ||
+        day === undefined ||
+        Number.isNaN(year) ||
+        Number.isNaN(month) ||
+        Number.isNaN(day)
+      ) {
+        return state;
+      }
+
+      const newLocal = {
+        ...state.draft.when.local,
+        year,
+        month,
+        day,
       };
 
       let newOffset = state.draft.when.offsetMinutes;

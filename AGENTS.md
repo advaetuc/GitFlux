@@ -25,6 +25,7 @@ GitFlux/
 ├── src/
 │   ├── core/                      # Pure TypeScript business logic (Zero-dependency sandbox)
 │   │   ├── execPlan.ts            # Execution recipes (Add, Commit, Raw Verify, Rollback)
+│   │   ├── heatmap.ts             # 12-week UTC contribution heatmap & day bucketing
 │   │   ├── jitter.ts              # Uniform random timestamp generation in working hours
 │   │   ├── message.ts             # Conventional commit prefix chips & message validation
 │   │   ├── path.ts                # Cross-platform path normalization & comparisons
@@ -33,8 +34,9 @@ GitFlux/
 │   │   ├── shellRender.ts         # Single-line preview generator for Copy / Terminal
 │   │   ├── timestamp.ts           # ISO 8601, epoch conversion, and offset resolution
 │   │   ├── types.ts               # Core domain types & interfaces
-│   │   └── warnings.ts            # Non-blocking user advisories
+│   │   └── warnings.ts            # Non-blocking user advisories & UTC day shift alerts
 │   ├── host/                      # Extension host integration (Node 20 / VS Code API)
+│   │   ├── activity.ts            # Author commit activity reader & memory cache
 │   │   ├── extension.ts           # Extension activation, command registration & disposal
 │   │   ├── gitApi.ts              # vscode.git API integration & repository discovery
 │   │   ├── ids.ts                 # Constant identifiers (EXTENSION_ID, VIEW_ID, commands)
@@ -45,8 +47,8 @@ GitFlux/
 │   │   └── terminal.ts            # Dedicated terminal management (sendText isolation)
 │   ├── shared/                    # Shared types & IPC protocol (bidirectional contracts)
 │   │   └── protocol.ts            # HostToWebviewMessage & WebviewToHostMessage
-│   └── webview/                   # Preact Webview UI (<15 KB gzip bundle)
-│       ├── components/            # UI components (ActionBar, CommitForm, FileList, etc.)
+│   └── webview/                   # Preact Webview UI (<16 KB gzip bundle)
+│       ├── components/            # UI components (ActionBar, StreakGrid, ReadinessChecklist, etc.)
 │       ├── App.tsx                # Top-level Preact application component
 │       ├── draftReducer.ts        # Pure reducer managing optimistic webview state
 │       ├── main.tsx               # Webview DOM entry point & hydration
@@ -75,10 +77,10 @@ Always use these exact scripts. Do not introduce alternative build steps:
 | `npm run build` | Compiles extension and webview via `esbuild.mjs` | Generates `dist/extension.js` and `dist/webview/main.js` |
 | `npm run typecheck` | Validates TypeScript across Host, Webview, and Tests | Zero type errors across all tsconfigs |
 | `npm run lint` | Runs ESLint 9 flat config across `src/` and `test/` | Zero warnings and zero errors (`--max-warnings 0`) |
-| `npm test` | Runs full Vitest unit and fixture test suite | All 23 test files pass |
-| `npm run test:coverage` | Runs unit tests with v8 code coverage | `src/core/**` line coverage **≥ 95%** (currently 99.33%) |
+| `npm test` | Runs full Vitest unit and fixture test suite | All 26 test files pass (532+ tests) |
+| `npm run test:coverage` | Runs unit tests with v8 code coverage | `src/core/**` line coverage **≥ 95%** (currently 99.40%) |
 | `REQUIRE_SHELLS=bash,zsh,sh,fish,pwsh npm run test:shell` | Runs 18 hostile vectors on installed shells | 90 passed, 36 skipped on macOS/Linux |
-| `npm run package` | Builds and packages into production `.vsix` | Generates `gitflux-0.1.0.vsix` without git tags |
+| `npm run package` | Builds and packages into production `.vsix` | Generates `gitflux-0.2.0.vsix` without git tags |
 | `npx vsce ls` | Lists all files that will be packaged into the VSIX | Exactly **11 files** (manifest, license, readme, dist) |
 
 ---

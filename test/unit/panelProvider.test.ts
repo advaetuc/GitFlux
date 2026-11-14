@@ -16,7 +16,18 @@ vi.mock("../../src/host/runner", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../../src/host/runner")>();
   return {
     ...actual,
-    runGit: vi.fn().mockResolvedValue({ stdout: "git version 2.40.0\n", stderr: "", code: 0 }),
+    runGit: vi.fn().mockImplementation((_gitPath: string, argv: readonly string[]) => {
+      if (argv[0] === "--version") {
+        return Promise.resolve({ stdout: "git version 2.40.0\n", stderr: "", code: 0 });
+      }
+      if (argv[0] === "config") {
+        return Promise.resolve({ stdout: "user@example.com\n", stderr: "", code: 0 });
+      }
+      if (argv[0] === "log") {
+        return Promise.resolve({ stdout: "1772625600\n", stderr: "", code: 0 });
+      }
+      return Promise.resolve({ stdout: "", stderr: "", code: 0 });
+    }),
   };
 });
 
@@ -299,6 +310,74 @@ describe("CommitPanelProvider webview handshake & debounce", () => {
 
     // Now exactly 1 snapshot should be posted
     expect(mockView.messages.filter((m) => m.type === "snapshot")).toHaveLength(1);
+
+    provider.dispose();
+  });
+
+  it("dispatches init before activity on ready", async () => {
+    vi.useRealTimers();
+    const mockGit = createMockGit();
+    mockGetGitApi.mockResolvedValue(mockGit.gitApi);
+
+    const outputChannel = vscode.window.createOutputChannel("test");
+    const provider = new CommitPanelProvider(vscode.Uri.file("/ext"), outputChannel);
+
+    const mockView = createMockWebviewView();
+    await provider.resolveWebviewView(
+      mockView.view as unknown as vscode.WebviewView,
+      {} as unknown as vscode.WebviewViewResolveContext,
+      {} as unknown as vscode.CancellationToken,
+    );
+
+    // Send "ready"
+    await mockView.sendMessage({ type: "ready", protocolVersion: 1 });
+
+    // Wait for fire-and-forget pushActivity
+    await new Promise((resolve) => setTimeout(resolve, 50));
+
+    const msgTypes = mockView.messages.map((m) => m.type);
+    expect(msgTypes).toContain("init");
+    expect(msgTypes).toContain("activity");
+
+    const initIndex = msgTypes.indexOf("init");
+    const activityIndex = msgTypes.indexOf("activity");
+    expect(initIndex).toBeLessThan(activityIndex);
+
+    provider.dispose();
+  });
+
+  it("dispatches activity on selectRepo", async () => {
+    vi.useRealTimers();
+    const mockGit = createMockGit();
+    mockGetGitApi.mockResolvedValue(mockGit.gitApi);
+
+    const outputChannel = vscode.window.createOutputChannel("test");
+    const provider = new CommitPanelProvider(vscode.Uri.file("/ext"), outputChannel);
+
+    const mockView = createMockWebviewView();
+    await provider.resolveWebviewView(
+      mockView.view as unknown as vscode.WebviewView,
+      {} as unknown as vscode.WebviewViewResolveContext,
+      {} as unknown as vscode.CancellationToken,
+    );
+
+    await mockView.sendMessage({ type: "ready", protocolVersion: 1 });
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    mockView.messages.length = 0; // Clear messages
+
+    // Send "selectRepo"
+    await mockView.sendMessage({ type: "selectRepo", repoId: repoPath });
+    await new Promise((resolve) => setTimeout(resolve, 50));
+
+    const msgTypes = mockView.messages.map((m) => m.type);
+    expect(msgTypes).toContain("snapshot");
+    expect(msgTypes).toContain("activity");
+
+    const activityMsg = mockView.messages.find((m) => m.type === "activity");
+    expect(activityMsg).toMatchObject({
+      type: "activity",
+      repoId: repoPath,
+    });
 
     provider.dispose();
   });

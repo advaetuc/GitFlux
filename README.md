@@ -35,6 +35,21 @@ Committing with historical or adjusted timestamps in Git is traditionally error-
 
 ---
 
+## Record Real Work on the Day You Did It
+
+Git lets you set a commit's author and committer date. GitFlux makes that precise and safe for work that is real but was committed late: a fix finished on Friday and committed Monday, files from a branch of work you forgot to commit, or timestamps you need to correct.
+
+**When GitHub counts a commit toward your contribution graph** (see [GitHub's troubleshooting guide](https://docs.github.com/en/account-and-profile/setting-up-and-managing-your-github-profile/managing-contribution-settings-on-your-profile/why-are-my-contributions-not-showing-up-on-my-profile)):
+- The commit email is associated with your GitHub account.
+- The repository is standalone, not a fork.
+- The commit is on the default branch (or `gh-pages`).
+- Days are bucketed in UTC, and a new commit can take up to 24 hours to appear.
+- Private-repository activity shows only if you enable private contributions in your GitHub profile settings.
+
+GitFlux does not bypass any of these rules. Use it to record work you actually did, not to misrepresent activity to others. GitFlux is not affiliated with GitHub.
+
+---
+
 ## Execution & Safety Pipeline
 
 <div align="center">
@@ -71,6 +86,15 @@ GitFlux enforces strict 4-layer isolation boundaries per [AM-09 & Architecture B
 2. **Extension Host (Node 20):** Handles extension lifecycle, URI resolution (`resourceResolver.ts`), 250ms debounced repository state snapshots (`repoState.ts`), webview messaging handshake (`panelProvider.ts`), Git execution mutex (`runner.ts`), and terminal isolation (`terminal.ts`).
 3. **Pure Core (Zero-Dep):** Pure TypeScript logic with zero dependencies, no access to VS Code APIs, and no Node.js built-ins. Contains plan generation (`plan.ts`), execution recipes (`execPlan.ts`), shell renderers (`shellRender.ts`), hostile vector quoting (`quote.ts`), and timestamp formatting (`timestamp.ts`).
 4. **Preact Webview (<15 KB):** Sandboxed UI compiled with Preact and Codicons. Communicates with the host solely over typed `postMessage` protocol with a strict nonce-based Content Security Policy (`script-src 'nonce-...'`).
+
+---
+
+## Why Is This Safe?
+
+- **Never rewrites pushed history:** Normal commits create new commits. The HEAD date amender refuses any commit already on a remote.
+- **Never uses `--no-verify`, `--force`, or `--force-with-lease`:** Your Git hooks run normally, and a failed hook rolls back only the untracked files GitFlux itself staged.
+- **Selective `--only` pathspecs:** Anything else you have staged in your index stays staged and uncommitted.
+- **Zero runtime dependencies:** The extension host ships zero npm runtime dependencies, and the Preact webview bundle is ~14 KB gzipped.
 
 ---
 

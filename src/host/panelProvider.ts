@@ -11,9 +11,10 @@ import type {
   ActionResult,
 } from "../shared/protocol";
 import { getGitApi, isGitVersionSupported } from "./gitApi";
-import { buildRepoSnapshot } from "./repoState";
+import { buildRepoSnapshot, buildHeadState } from "./repoState";
 import { detectShell } from "./shell";
 import { runGit, executePlan, executeAmendPlan, isHeadPublished } from "./runner";
+import { getRepoActivity } from "./activity";
 import { buildCommitPlan, buildAmendPlan } from "../core/plan";
 import { renderShell } from "../core/shellRender";
 import { sendCommandToTerminal, getEffectiveAutoRun } from "./terminal";
@@ -25,7 +26,7 @@ import {
   CONFIG_PUSH_DEFAULT_ENABLED,
   VIEW_ID,
 } from "./ids";
-import type { ShellKind, ShellSetting } from "../core/types";
+import type { HeadState, ShellKind, ShellSetting } from "../core/types";
 import type { API as GitAPI, Repository } from "./vendor/git";
 
 export function resolveEffectiveShell(
@@ -321,6 +322,32 @@ export class CommitPanelProvider implements vscode.WebviewViewProvider, vscode.D
     }
   }
 
+  private async pushActivity(repo: Repository, head: HeadState): Promise<void> {
+    try {
+      if (!this.view || !this.webviewReady) return;
+      const gitApi = await getGitApi();
+      const gitPath = gitApi?.git.path ?? "git";
+      const repoId = repo.rootUri.fsPath;
+      const headSha = repo.state.HEAD?.commit;
+      const activity = await getRepoActivity({
+        gitPath,
+        repoRoot: repoId,
+        repoId,
+        head,
+        ...(headSha ? { headSha } : {}),
+      });
+
+      this.postMessage({
+        type: "activity",
+        repoId,
+        ...(activity.email ? { email: activity.email } : {}),
+        dayCounts: activity.dayCounts,
+      });
+    } catch {
+      // Catch any errors silently so snapshot is never blocked or delayed
+    }
+  }
+
   private getHostEnv(detectedKind: string, isWsl: boolean): HostEnv {
     const config = vscode.workspace.getConfiguration();
     const shellSetting = config.get<ShellSetting>(CONFIG_SHELL, "auto");
@@ -371,6 +398,11 @@ export class CommitPanelProvider implements vscode.WebviewViewProvider, vscode.D
 
         await this.sendFullInit();
 
+        const activeRepo = this.getActiveRepository(gitApi);
+        if (activeRepo) {
+          void this.pushActivity(activeRepo, buildHeadState(activeRepo));
+        }
+
         if (this.pendingPreselect) {
           const pre = this.pendingPreselect;
           this.pendingPreselect = undefined;
@@ -395,6 +427,7 @@ export class CommitPanelProvider implements vscode.WebviewViewProvider, vscode.D
           this.activeRepoId = msg.repoId;
           const snapshot = await buildRepoSnapshot(repo, msg.repoId);
           this.postMessage({ type: "snapshot", snapshot });
+          void this.pushActivity(repo, snapshot.head);
         }
         break;
       }
@@ -632,6 +665,9 @@ export class CommitPanelProvider implements vscode.WebviewViewProvider, vscode.D
         try {
           const postRunSnapshot = await buildRepoSnapshot(repo, msg.draft.repoId);
           this.postMessage({ type: "snapshot", snapshot: postRunSnapshot });
+          if (result.ok) {
+            void this.pushActivity(repo, postRunSnapshot.head);
+          }
         } catch {
           // If repo state reading fails, ignore
         }
@@ -730,6 +766,9 @@ export class CommitPanelProvider implements vscode.WebviewViewProvider, vscode.D
         try {
           const postRunSnapshot = await buildRepoSnapshot(repo, msg.draft.repoId, undefined, gitApi.git.path);
           this.postMessage({ type: "snapshot", snapshot: postRunSnapshot });
+          if (result.ok) {
+            void this.pushActivity(repo, postRunSnapshot.head);
+          }
         } catch {
           // If repo state reading fails, ignore
         }

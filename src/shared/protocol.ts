@@ -129,7 +129,13 @@ export type HostToWebview =
       readonly step: RunStepId;
       readonly status: "start" | "ok" | "fail";
     }
-  | { readonly type: "result"; readonly requestId: string; readonly result: ActionResult };
+  | { readonly type: "result"; readonly requestId: string; readonly result: ActionResult }
+  | {
+      readonly type: "activity";
+      readonly repoId: RepoId;
+      readonly email?: string;
+      readonly dayCounts?: Readonly<Record<string, number>>;
+    };
 
 export function assertNever(x: never): never {
   throw new Error(`Unhandled variant: ${JSON.stringify(x)}`);

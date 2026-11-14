@@ -2,7 +2,7 @@
   "name": "gitflux",
   "displayName": "GitFlux",
   "description": "Stage selected files and commit them with a custom author and committer date.",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "publisher": "advaetuc",
   "license": "MIT",
   "repository": {

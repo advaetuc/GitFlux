@@ -1,0 +1,98 @@
+name: Publish Release
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+jobs:
+  ci:
+    uses: ./.github/workflows/ci.yml
+
+  package:
+    needs: ci
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    outputs:
+      vsix: ${{ steps.find-vsix.outputs.vsix }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies and build
+        run: |
+          npm ci
+          npm run build
+
+      - name: Validate tag matches package.json version
+        run: |
+          PKG_VERSION="v$(node -p "require('./package.json').version")"
+          if [ "$PKG_VERSION" != "$GITHUB_REF_NAME" ]; then
+            echo "Error: Tag $GITHUB_REF_NAME does not match package.json version $PKG_VERSION"
+            exit 1
+          fi
+
+      - name: Verify commit belongs to origin/main
+        run: |
+          git branch -r --contains "$GITHUB_SHA" | grep -q 'origin/main' || {
+            echo "Error: Tagged commit $GITHUB_SHA is not contained in origin/main"
+            exit 1
+          }
+
+      - name: Package VSIX
+        run: npm run package
+
+      - name: Assert exact 11-file VSIX allowlist
+        run: |
+          FILE_COUNT="$(npx vsce ls | grep -c .)"
+          echo "Package file count: $FILE_COUNT"
+          test "$FILE_COUNT" = "11"
+
+      - name: Identify VSIX filename
+        id: find-vsix
+        run: |
+          VSIX_FILE=$(ls gitflux-*.vsix | head -n 1)
+          echo "vsix=$VSIX_FILE" >> "$GITHUB_OUTPUT"
+
+      - name: Upload VSIX artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: vsix-release
+          path: "*.vsix"
+
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" "${{ steps.find-vsix.outputs.vsix }}" --generate-notes
+
+  publish:
+    needs: package
+    runs-on: ubuntu-latest
+    environment: marketplace-publish
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Download VSIX artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: vsix-release
+
+      - name: Publish to VS Code Marketplace via OIDC
+        run: |
+          npx --yes @vscode/vsce@latest publish --oidc --packagePath "${{ needs.package.outputs.vsix }}"
