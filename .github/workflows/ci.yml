@@ -34,6 +34,8 @@ jobs:
           git --version
           bash docs/spikes/s1.sh
           bash docs/spikes/s2.sh
+      - name: Build bundles
+        run: npm run build
       - run: npm run test:coverage
 
   shell-matrix:

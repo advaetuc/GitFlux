@@ -61,10 +61,11 @@ function quotePowerShell(val: string): string {
 
 /**
  * cmd.exe double-quote wrapping:
- * No escaping attempted; unsafe chars are rejected.
+ * Any trailing backslashes immediately preceding the closing double quote are doubled
+ * so Windows CommandLineToArgvW does not treat them as escaping the closing quote.
  */
 function quoteCmd(val: string): string {
-  return `"${val}"`;
+  return `"${val.replace(/(\\+)$/, "$1$1")}"`;
 }
 
 // Extra forbidden characters:

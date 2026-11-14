@@ -33,10 +33,12 @@ describe("quote rules and escaping", () => {
     }
   });
 
-  it("cmd wraps in double quotes without escaping", () => {
+  it("cmd wraps in double quotes and doubles trailing backslashes", () => {
     const q = QUOTE_RULES.cmd.quote;
     expect(q("hello")).toBe('"hello"');
     expect(q("hello world")).toBe('"hello world"');
+    expect(q("back\\slash")).toBe('"back\\slash"');
+    expect(q("trailing\\")).toBe('"trailing\\\\"');
   });
 
   it("formats unsafe characters correctly", () => {

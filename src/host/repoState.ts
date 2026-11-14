@@ -49,14 +49,12 @@ export function normalizeFsPath(fsPath: string): string {
       // ignore
     }
   }
-  if (process.platform === "darwin") {
-    if (norm === "/private/tmp" || norm.startsWith("/private/tmp/")) {
-      norm = norm.slice(8);
-    } else if (norm === "/private/var" || norm.startsWith("/private/var/")) {
-      norm = norm.slice(8);
-    } else if (norm === "/private/etc" || norm.startsWith("/private/etc/")) {
-      norm = norm.slice(8);
-    }
+  if (norm === "/private/tmp" || norm.startsWith("/private/tmp/")) {
+    norm = norm.slice(8);
+  } else if (norm === "/private/var" || norm.startsWith("/private/var/")) {
+    norm = norm.slice(8);
+  } else if (norm === "/private/etc" || norm.startsWith("/private/etc/")) {
+    norm = norm.slice(8);
   }
   return norm;
 }

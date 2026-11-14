@@ -9,25 +9,36 @@ describe("Architecture Fitness Rules (AM-09 & Blueprint §5.2)", () => {
     return results[0]?.messages ?? [];
   }
 
+  function assertRestrictedImport(
+    messages: Array<{ ruleId: string | null; message: string }>,
+    desc: string,
+  ): void {
+    const hasRestricted = messages.some((m) => m.ruleId === "no-restricted-imports");
+    if (!hasRestricted) {
+      console.error(`[lint-fitness failure] Expected no-restricted-imports for ${desc}, got:`, JSON.stringify(messages, null, 2));
+    }
+    expect(hasRestricted, `Expected no-restricted-imports for ${desc}`).toBe(true);
+  }
+
   describe("src/core/** restrictions", () => {
     it("blocks import from vscode", async () => {
       const messages = await lint('import "vscode";\n', "src/core/path.ts");
-      expect(messages.some((m) => m.ruleId === "no-restricted-imports")).toBe(true);
+      assertRestrictedImport(messages, 'import "vscode" in src/core/path.ts');
     });
 
     it("blocks import from node:* built-in", async () => {
       const messages = await lint('import "node:fs";\n', "src/core/path.ts");
-      expect(messages.some((m) => m.ruleId === "no-restricted-imports")).toBe(true);
+      assertRestrictedImport(messages, 'import "node:fs" in src/core/path.ts');
     });
 
     it("blocks import from bare Node built-in", async () => {
       const messages = await lint('import "fs";\n', "src/core/path.ts");
-      expect(messages.some((m) => m.ruleId === "no-restricted-imports")).toBe(true);
+      assertRestrictedImport(messages, 'import "fs" in src/core/path.ts');
     });
 
     it("blocks imports from outside src/core", async () => {
       const messages = await lint('import "../shared/protocol";\n', "src/core/path.ts");
-      expect(messages.some((m) => m.ruleId === "no-restricted-imports")).toBe(true);
+      assertRestrictedImport(messages, 'import "../shared/protocol" in src/core/path.ts');
     });
 
     it("blocks restricted globals in core", async () => {
@@ -55,17 +66,17 @@ describe("Architecture Fitness Rules (AM-09 & Blueprint §5.2)", () => {
   describe("src/webview/** restrictions", () => {
     it("blocks vscode imports", async () => {
       const messages = await lint('import "vscode";\n', "src/webview/main.tsx");
-      expect(messages.some((m) => m.ruleId === "no-restricted-imports")).toBe(true);
+      assertRestrictedImport(messages, 'import "vscode" in src/webview/main.tsx');
     });
 
     it("blocks node built-ins", async () => {
       const messages = await lint('import "fs";\n', "src/webview/main.tsx");
-      expect(messages.some((m) => m.ruleId === "no-restricted-imports")).toBe(true);
+      assertRestrictedImport(messages, 'import "fs" in src/webview/main.tsx');
     });
 
     it("blocks imports from host", async () => {
       const messages = await lint('import "../host/runner";\n', "src/webview/main.tsx");
-      expect(messages.some((m) => m.ruleId === "no-restricted-imports")).toBe(true);
+      assertRestrictedImport(messages, 'import "../host/runner" in src/webview/main.tsx');
     });
 
     it("blocks innerHTML assignment", async () => {
@@ -128,7 +139,7 @@ describe("Architecture Fitness Rules (AM-09 & Blueprint §5.2)", () => {
   describe("child_process isolation", () => {
     it("blocks child_process in host files other than runner.ts", async () => {
       const messages = await lint('import "child_process";\n', "src/host/extension.ts");
-      expect(messages.some((m) => m.ruleId === "no-restricted-imports")).toBe(true);
+      assertRestrictedImport(messages, 'import "child_process" in src/host/extension.ts');
     });
 
     it("allows child_process in runner.ts", async () => {

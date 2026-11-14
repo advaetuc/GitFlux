@@ -2,7 +2,7 @@
 import tseslint from "typescript-eslint";
 import { builtinModules } from "node:module";
 
-const bareBuiltins = builtinModules.filter((m) => !m.startsWith("_"));
+const bareBuiltins = builtinModules.filter((m) => !m.startsWith("_") && m !== "child_process");
 const nodePrefixed = bareBuiltins.map((m) => `node:${m}`);
 const bareBuiltinPaths = bareBuiltins.map((m) => ({
   name: m,
@@ -29,23 +29,6 @@ export default tseslint.config(
     },
   },
 
-  // ── All source files except runner.ts: ban child_process ──
-  {
-    files: ["src/**/*.ts", "src/**/*.tsx"],
-    ignores: ["src/host/runner.ts"],
-    rules: {
-      "no-restricted-imports": [
-        "error",
-        {
-          paths: [
-            { name: "child_process", message: "child_process may only be imported in runner.ts." },
-            { name: "node:child_process", message: "child_process may only be imported in runner.ts." },
-          ],
-        },
-      ],
-    },
-  },
-
   // ── All files except terminal.ts: ban sendText ──
   {
     files: ["src/**/*.ts", "src/**/*.tsx", "test/**/*.ts"],
@@ -56,6 +39,29 @@ export default tseslint.config(
         {
           selector: "CallExpression[callee.property.name='sendText']",
           message: "sendText may only be called in terminal.ts.",
+        },
+      ],
+    },
+  },
+
+  // ── src/host/** and src/shared/**: ban child_process except in runner.ts ──
+  {
+    files: ["src/host/**/*.ts", "src/shared/**/*.ts"],
+    ignores: ["src/host/runner.ts"],
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        {
+          paths: [
+            { name: "child_process", message: "child_process may only be imported in runner.ts." },
+            { name: "node:child_process", message: "child_process may only be imported in runner.ts." },
+          ],
+          patterns: [
+            {
+              group: ["child_process", "node:child_process", "child_process/**", "node:child_process/**"],
+              message: "child_process may only be imported in runner.ts.",
+            },
+          ],
         },
       ],
     },
@@ -75,6 +81,11 @@ export default tseslint.config(
             ...bareBuiltinPaths,
           ],
           patterns: [
+            { group: ["vscode", "vscode/**"], message: "core must not import vscode." },
+            {
+              group: ["child_process", "node:child_process", "child_process/**", "node:child_process/**"],
+              message: "child_process may only be imported in runner.ts.",
+            },
             { group: ["node:*", ...nodePrefixed], message: "core must not import Node built-ins." },
             { group: ["../*", "../**"], message: "core must not import paths outside src/core." },
           ],
@@ -108,6 +119,11 @@ export default tseslint.config(
             ...bareBuiltinPaths,
           ],
           patterns: [
+            { group: ["vscode", "vscode/**"], message: "webview must not import vscode." },
+            {
+              group: ["child_process", "node:child_process", "child_process/**", "node:child_process/**"],
+              message: "child_process may only be imported in runner.ts.",
+            },
             { group: ["node:*", ...nodePrefixed], message: "webview must not import Node built-ins." },
             { group: ["../host/**", "**/host/**"], message: "webview must not import host." },
           ],
