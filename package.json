@@ -42,7 +42,7 @@
     "test:coverage": "vitest run --coverage",
     "test:shell": "vitest run --dir test/shell-matrix",
     "test:integration": "vscode-test",
-    "package": "vsce package --no-git-tag-version"
+    "package": "vsce package --no-git-tag-version --no-rewrite-relative-links"
   },
   "contributes": {
     "commands": [

@@ -1,0 +1,147 @@
+<svg width="880" height="240" viewBox="0 0 880 240" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="pipeBg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0d1117" />
+      <stop offset="100%" stop-color="#161b22" />
+    </linearGradient>
+    <pattern id="pipeGrid" width="20" height="20" patternUnits="userSpaceOnUse">
+      <path d="M 20 0 L 0 0 0 20" fill="none" stroke="#30363d" stroke-width="0.5" stroke-opacity="0.3" />
+    </pattern>
+    <marker id="pipeArrow" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 1.5 L 8 5 L 0 8.5 z" fill="#58a6ff" />
+    </marker>
+  </defs>
+
+  <!-- Background Card -->
+  <rect x="1" y="1" width="878" height="238" rx="12" fill="url(#pipeBg)" stroke="#30363d" stroke-width="1.5" />
+  <rect x="2" y="2" width="876" height="236" rx="11" fill="url(#pipeGrid)" />
+
+  <!-- Header Section -->
+  <g transform="translate(24, 18)">
+    <text x="0" y="14" fill="#f0f6fc" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="13" font-weight="700" letter-spacing="0.5">GITFLUX EXECUTION &amp; SAFETY PIPELINE</text>
+    <text x="320" y="14" fill="#8b949e" font-family="'SF Mono', 'Fira Code', monospace" font-size="11">Atomic Commit • Host Isolation • Zero Index Corruption</text>
+  </g>
+
+  <!-- STEP 1: Preflight -->
+  <g transform="translate(24, 48)">
+    <rect width="148" height="170" rx="8" fill="#161b22" stroke="#30363d" stroke-width="1" />
+    <rect x="1" y="1" width="146" height="26" rx="7" fill="#21262d" />
+    <circle cx="12" cy="13" r="3.5" fill="#58a6ff" />
+    <text x="22" y="17" fill="#f0f6fc" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="10.5" font-weight="700">1. PREFLIGHT</text>
+
+    <g transform="translate(10, 36)">
+      <text x="0" y="12" fill="#e6edf3" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="10" font-weight="600">State Snapshot</text>
+      <text x="0" y="25" fill="#8b949e" font-family="'SF Mono', monospace" font-size="8.5">Index &amp; worktree diff</text>
+
+      <text x="0" y="45" fill="#e6edf3" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="10" font-weight="600">Blocker Detection</text>
+      <text x="0" y="58" fill="#8b949e" font-family="'SF Mono', monospace" font-size="8.5">Rebase/merge active?</text>
+
+      <text x="0" y="78" fill="#e6edf3" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="10" font-weight="600">Repo Mutex Lock</text>
+      <text x="0" y="91" fill="#8b949e" font-family="'SF Mono', monospace" font-size="8.5">Per-repo serializer</text>
+
+      <rect x="0" y="104" width="128" height="20" rx="4" fill="#0d1117" stroke="#30363d" stroke-width="0.8" />
+      <text x="6" y="118" fill="#58a6ff" font-family="'SF Mono', monospace" font-size="8.5">Validates selection</text>
+    </g>
+  </g>
+
+  <!-- Arrow 1 -> 2 -->
+  <path d="M 172 133 L 194 133" stroke="#58a6ff" stroke-width="1.5" marker-end="url(#pipeArrow)" />
+
+  <!-- STEP 2: Stdin NUL Add -->
+  <g transform="translate(196, 48)">
+    <rect width="150" height="170" rx="8" fill="#161b22" stroke="#30363d" stroke-width="1" />
+    <rect x="1" y="1" width="148" height="26" rx="7" fill="#21262d" />
+    <circle cx="12" cy="13" r="3.5" fill="#bc8cff" />
+    <text x="22" y="17" fill="#f0f6fc" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="10.5" font-weight="700">2. STDIN NUL ADD</text>
+
+    <g transform="translate(10, 36)">
+      <text x="0" y="12" fill="#e6edf3" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="10" font-weight="600">Untracked Only</text>
+      <text x="0" y="25" fill="#8b949e" font-family="'SF Mono', monospace" font-size="8.5">Skips already tracked</text>
+
+      <text x="0" y="45" fill="#e6edf3" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="10" font-weight="600">NUL Separation</text>
+      <text x="0" y="58" fill="#8b949e" font-family="'SF Mono', monospace" font-size="8.5">--pathspec-file-nul</text>
+
+      <text x="0" y="78" fill="#e6edf3" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="10" font-weight="600">Literal Pathspecs</text>
+      <text x="0" y="91" fill="#8b949e" font-family="'SF Mono', monospace" font-size="8.5">No glob expansion</text>
+
+      <rect x="0" y="104" width="130" height="20" rx="4" fill="#0d1117" stroke="#30363d" stroke-width="0.8" />
+      <text x="6" y="118" fill="#bc8cff" font-family="'SF Mono', monospace" font-size="8.5">Preserves index</text>
+    </g>
+  </g>
+
+  <!-- Arrow 2 -> 3 -->
+  <path d="M 346 133 L 368 133" stroke="#58a6ff" stroke-width="1.5" marker-end="url(#pipeArrow)" />
+
+  <!-- STEP 3: Commit with Date Env -->
+  <g transform="translate(370, 48)">
+    <rect width="170" height="170" rx="8" fill="#161b22" stroke="#238636" stroke-width="1.2" />
+    <rect x="1" y="1" width="168" height="26" rx="7" fill="#04260f" />
+    <circle cx="12" cy="13" r="3.5" fill="#3fb950" />
+    <text x="22" y="17" fill="#7ee787" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="10.5" font-weight="700">3. COMMIT --ONLY</text>
+
+    <g transform="translate(10, 36)">
+      <text x="0" y="12" fill="#e6edf3" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="10" font-weight="600">Date Environment</text>
+      <text x="0" y="25" fill="#8b949e" font-family="'SF Mono', monospace" font-size="8.5">GIT_AUTHOR/COMMITTER</text>
+
+      <text x="0" y="45" fill="#e6edf3" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="10" font-weight="600">Selective Isolation</text>
+      <text x="0" y="58" fill="#8b949e" font-family="'SF Mono', monospace" font-size="8.5">--only (bypasses index)</text>
+
+      <!-- Rollback Badge -->
+      <rect x="0" y="72" width="150" height="52" rx="4" fill="#0d1117" stroke="#da3633" stroke-width="1" />
+      <circle cx="10" cy="84" r="3" fill="#f85149" />
+      <text x="18" y="87" fill="#f85149" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="9" font-weight="700">ROLLBACK ON HOOK FAIL</text>
+      <text x="6" y="103" fill="#8b949e" font-family="'SF Mono', monospace" font-size="8">git rm --cached -q --</text>
+      <text x="6" y="116" fill="#8b949e" font-family="'SF Mono', monospace" font-size="8">Restores untracked state</text>
+    </g>
+  </g>
+
+  <!-- Arrow 3 -> 4 -->
+  <path d="M 540 133 L 562 133" stroke="#58a6ff" stroke-width="1.5" marker-end="url(#pipeArrow)" />
+
+  <!-- STEP 4: Raw Verify -->
+  <g transform="translate(564, 48)">
+    <rect width="144" height="170" rx="8" fill="#161b22" stroke="#30363d" stroke-width="1" />
+    <rect x="1" y="1" width="142" height="26" rx="7" fill="#21262d" />
+    <circle cx="12" cy="13" r="3.5" fill="#d29922" />
+    <text x="22" y="17" fill="#f0f6fc" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="10.5" font-weight="700">4. RAW VERIFY</text>
+
+    <g transform="translate(10, 36)">
+      <text x="0" y="12" fill="#e6edf3" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="10" font-weight="600">git log -1 --date=raw</text>
+      <text x="0" y="25" fill="#8b949e" font-family="'SF Mono', monospace" font-size="8.5">%H%x00%ad%x00%cd</text>
+
+      <text x="0" y="45" fill="#e6edf3" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="10" font-weight="600">Timestamp Match</text>
+      <text x="0" y="58" fill="#8b949e" font-family="'SF Mono', monospace" font-size="8.5">&lt;epoch&gt; &lt;±HHMM&gt;</text>
+
+      <text x="0" y="78" fill="#e6edf3" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="10" font-weight="600">Offset Validation</text>
+      <text x="0" y="91" fill="#8b949e" font-family="'SF Mono', monospace" font-size="8.5">Both author &amp; committer</text>
+
+      <rect x="0" y="104" width="124" height="20" rx="4" fill="#0d1117" stroke="#30363d" stroke-width="0.8" />
+      <text x="6" y="118" fill="#d29922" font-family="'SF Mono', monospace" font-size="8.5">Guarantees precision</text>
+    </g>
+  </g>
+
+  <!-- Arrow 4 -> 5 -->
+  <path d="M 708 133 L 730 133" stroke="#58a6ff" stroke-width="1.5" marker-end="url(#pipeArrow)" />
+
+  <!-- STEP 5: Push (Optional) -->
+  <g transform="translate(732, 48)">
+    <rect width="124" height="170" rx="8" fill="#161b22" stroke="#30363d" stroke-width="1" />
+    <rect x="1" y="1" width="122" height="26" rx="7" fill="#21262d" />
+    <circle cx="12" cy="13" r="3.5" fill="#39c5cf" />
+    <text x="22" y="17" fill="#f0f6fc" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="10.5" font-weight="700">5. PUSH (OPT)</text>
+
+    <g transform="translate(8, 36)">
+      <text x="0" y="12" fill="#e6edf3" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="10" font-weight="600">vscode.git Push</text>
+      <text x="0" y="25" fill="#8b949e" font-family="'SF Mono', monospace" font-size="8.5">Built-in API call</text>
+
+      <text x="0" y="45" fill="#e6edf3" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="10" font-weight="600">Remote Policy</text>
+      <text x="0" y="58" fill="#8b949e" font-family="'SF Mono', monospace" font-size="8.5">Respects tracking</text>
+
+      <text x="0" y="78" fill="#e6edf3" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="10" font-weight="600">Unpublished Only</text>
+      <text x="0" y="91" fill="#8b949e" font-family="'SF Mono', monospace" font-size="8.5">No force push</text>
+
+      <rect x="0" y="104" width="108" height="20" rx="4" fill="#0d1117" stroke="#30363d" stroke-width="0.8" />
+      <text x="6" y="118" fill="#39c5cf" font-family="'SF Mono', monospace" font-size="8.5">UI Checkbox state</text>
+    </g>
+  </g>
+</svg>

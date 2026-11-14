@@ -1,0 +1,169 @@
+<svg width="880" height="320" viewBox="0 0 880 320" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0d1117" />
+      <stop offset="100%" stop-color="#161b22" />
+    </linearGradient>
+    <pattern id="archGrid" width="20" height="20" patternUnits="userSpaceOnUse">
+      <path d="M 20 0 L 0 0 0 20" fill="none" stroke="#30363d" stroke-width="0.5" stroke-opacity="0.3" />
+    </pattern>
+    <marker id="arrow" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 1.5 L 8 5 L 0 8.5 z" fill="#58a6ff" />
+    </marker>
+    <marker id="arrowGreen" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 1.5 L 8 5 L 0 8.5 z" fill="#3fb950" />
+    </marker>
+  </defs>
+
+  <!-- Canvas Background -->
+  <rect x="1" y="1" width="878" height="318" rx="12" fill="url(#bgGrad)" stroke="#30363d" stroke-width="1.5" />
+  <rect x="2" y="2" width="876" height="316" rx="11" fill="url(#archGrid)" />
+
+  <!-- Header -->
+  <g transform="translate(24, 20)">
+    <text x="0" y="14" fill="#f0f6fc" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="14" font-weight="700" letter-spacing="0.5">GITFLUX 4-LAYER SYSTEM ARCHITECTURE</text>
+    <text x="340" y="14" fill="#8b949e" font-family="'SF Mono', 'Fira Code', monospace" font-size="12">AM-09 &amp; Blueprint §5.2 Isolation Boundaries</text>
+  </g>
+
+  <!-- LAYER 1: Entry Points -->
+  <g transform="translate(24, 46)">
+    <rect width="186" height="250" rx="8" fill="#161b22" stroke="#30363d" stroke-width="1" />
+    <!-- Header Pill -->
+    <rect x="1" y="1" width="184" height="30" rx="7" fill="#21262d" />
+    <circle cx="16" cy="16" r="4" fill="#58a6ff" />
+    <text x="28" y="20" fill="#f0f6fc" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="11" font-weight="700">1. ENTRY POINTS</text>
+
+    <!-- Items -->
+    <g transform="translate(10, 42)">
+      <rect width="166" height="36" rx="6" fill="#0d1117" stroke="#30363d" stroke-width="1" />
+      <text x="10" y="16" fill="#c9d1d9" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="11" font-weight="600">Explorer Context</text>
+      <text x="10" y="29" fill="#8b949e" font-family="'SF Mono', monospace" font-size="9">explorer/context</text>
+    </g>
+
+    <g transform="translate(10, 86)">
+      <rect width="166" height="36" rx="6" fill="#0d1117" stroke="#30363d" stroke-width="1" />
+      <text x="10" y="16" fill="#c9d1d9" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="11" font-weight="600">SCM Changes Context</text>
+      <text x="10" y="29" fill="#8b949e" font-family="'SF Mono', monospace" font-size="9">scm/resourceState/context</text>
+    </g>
+
+    <g transform="translate(10, 130)">
+      <rect width="166" height="36" rx="6" fill="#0d1117" stroke="#30363d" stroke-width="1" />
+      <text x="10" y="16" fill="#c9d1d9" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="11" font-weight="600">Command Palette</text>
+      <text x="10" y="29" fill="#8b949e" font-family="'SF Mono', monospace" font-size="9">gitflux.open / Selection</text>
+    </g>
+
+    <g transform="translate(10, 174)">
+      <rect width="166" height="42" rx="6" fill="#0d1117" stroke="#238636" stroke-width="0.8" />
+      <text x="10" y="16" fill="#7ee787" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="10" font-weight="600">Source Control Panel</text>
+      <text x="10" y="29" fill="#8b949e" font-family="'SF Mono', monospace" font-size="9">views.scm: gitflux.panel</text>
+    </g>
+  </g>
+
+  <!-- Connection: L1 -> L2 -->
+  <path d="M 210 156 L 236 156" stroke="#58a6ff" stroke-width="1.5" marker-end="url(#arrow)" />
+
+  <!-- LAYER 2: Extension Host -->
+  <g transform="translate(242, 46)">
+    <rect width="206" height="250" rx="8" fill="#161b22" stroke="#30363d" stroke-width="1" />
+    <!-- Header Pill -->
+    <rect x="1" y="1" width="204" height="30" rx="7" fill="#21262d" />
+    <circle cx="16" cy="16" r="4" fill="#bc8cff" />
+    <text x="28" y="20" fill="#f0f6fc" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="11" font-weight="700">2. EXTENSION HOST (NODE 20)</text>
+
+    <!-- Components -->
+    <g transform="translate(10, 40)">
+      <text x="0" y="12" fill="#58a6ff" font-family="'SF Mono', monospace" font-size="11" font-weight="600">extension.ts</text>
+      <text x="100" y="12" fill="#8b949e" font-family="sans-serif" font-size="9.5">Lifecycle &amp; Cmds</text>
+
+      <text x="0" y="36" fill="#58a6ff" font-family="'SF Mono', monospace" font-size="11" font-weight="600">resourceResolver</text>
+      <text x="120" y="36" fill="#8b949e" font-family="sans-serif" font-size="9.5">URI &amp; multi-select</text>
+
+      <text x="0" y="60" fill="#58a6ff" font-family="'SF Mono', monospace" font-size="11" font-weight="600">repoState.ts</text>
+      <text x="86" y="60" fill="#8b949e" font-family="sans-serif" font-size="9.5">250ms debounced</text>
+
+      <text x="0" y="84" fill="#58a6ff" font-family="'SF Mono', monospace" font-size="11" font-weight="600">panelProvider.ts</text>
+      <text x="114" y="84" fill="#8b949e" font-family="sans-serif" font-size="9.5">Webview handshake</text>
+
+      <rect x="0" y="104" width="186" height="42" rx="4" fill="#0d1117" stroke="#30363d" stroke-width="1" />
+      <text x="8" y="120" fill="#bc8cff" font-family="'SF Mono', monospace" font-size="10.5" font-weight="600">runner.ts (execFile)</text>
+      <text x="8" y="136" fill="#8b949e" font-family="sans-serif" font-size="9">Child process gateway &amp; git mutex</text>
+
+      <rect x="0" y="154" width="186" height="34" rx="4" fill="#0d1117" stroke="#30363d" stroke-width="1" />
+      <text x="8" y="170" fill="#bc8cff" font-family="'SF Mono', monospace" font-size="10.5" font-weight="600">terminal.ts (sendText)</text>
+      <text x="8" y="182" fill="#8b949e" font-family="sans-serif" font-size="9">Dedicated terminal isolation</text>
+    </g>
+  </g>
+
+  <!-- Connection: L2 <-> L3 -->
+  <path d="M 448 130 L 476 130" stroke="#3fb950" stroke-width="1.5" marker-end="url(#arrowGreen)" />
+  <path d="M 476 142 L 448 142" stroke="#3fb950" stroke-width="1.5" marker-end="url(#arrowGreen)" />
+
+  <!-- LAYER 3: Pure Core -->
+  <g transform="translate(482, 46)">
+    <rect width="188" height="250" rx="8" fill="#161b22" stroke="#238636" stroke-width="1.2" />
+    <!-- Header Pill -->
+    <rect x="1" y="1" width="186" height="30" rx="7" fill="#04260f" />
+    <circle cx="16" cy="16" r="4" fill="#3fb950" />
+    <text x="28" y="20" fill="#7ee787" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="11" font-weight="700">3. PURE CORE (ZERO-DEP)</text>
+
+    <!-- Sub-badge -->
+    <rect x="8" y="38" width="172" height="18" rx="4" fill="#1f6feb" fill-opacity="0.15" />
+    <text x="14" y="51" fill="#58a6ff" font-family="'SF Mono', monospace" font-size="8.5">NO VSCODE • NO NODE BUILTINS</text>
+
+    <!-- Core Files -->
+    <g transform="translate(10, 68)">
+      <text x="0" y="12" fill="#e6edf3" font-family="'SF Mono', monospace" font-size="11" font-weight="600">plan.ts</text>
+      <text x="70" y="12" fill="#8b949e" font-family="sans-serif" font-size="9.5">Preflight &amp; blockers</text>
+
+      <text x="0" y="34" fill="#e6edf3" font-family="'SF Mono', monospace" font-size="11" font-weight="600">execPlan.ts</text>
+      <text x="84" y="34" fill="#8b949e" font-family="sans-serif" font-size="9.5">Add, Commit, Raw</text>
+
+      <text x="0" y="56" fill="#e6edf3" font-family="'SF Mono', monospace" font-size="11" font-weight="600">shellRender.ts</text>
+      <text x="96" y="56" fill="#8b949e" font-family="sans-serif" font-size="9.5">1-line preview</text>
+
+      <text x="0" y="78" fill="#e6edf3" font-family="'SF Mono', monospace" font-size="11" font-weight="600">quote.ts</text>
+      <text x="64" y="78" fill="#8b949e" font-family="sans-serif" font-size="9.5">7 shell matrices</text>
+
+      <text x="0" y="100" fill="#e6edf3" font-family="'SF Mono', monospace" font-size="11" font-weight="600">timestamp.ts</text>
+      <text x="90" y="100" fill="#8b949e" font-family="sans-serif" font-size="9.5">ISO &amp; epoch ±HHMM</text>
+
+      <text x="0" y="122" fill="#e6edf3" font-family="'SF Mono', monospace" font-size="11" font-weight="600">jitter.ts</text>
+      <text x="60" y="122" fill="#8b949e" font-family="sans-serif" font-size="9.5">Uniform working hrs</text>
+
+      <rect x="0" y="136" width="168" height="28" rx="4" fill="#0d1117" stroke="#30363d" stroke-width="1" />
+      <text x="8" y="154" fill="#d29922" font-family="'SF Mono', monospace" font-size="9.5" font-weight="600">99.33% Line Coverage</text>
+    </g>
+  </g>
+
+  <!-- Connection: L2 <-> L4 (via top curve) -->
+  <path d="M 448 80 C 560 80 600 80 690 80" stroke="#bc8cff" stroke-width="1.5" stroke-dasharray="4 3" marker-end="url(#arrow)" />
+  <text x="530" y="72" fill="#bc8cff" font-family="'SF Mono', monospace" font-size="9">postMessage IPC</text>
+
+  <!-- LAYER 4: Preact Webview -->
+  <g transform="translate(696, 46)">
+    <rect width="160" height="250" rx="8" fill="#161b22" stroke="#30363d" stroke-width="1" />
+    <!-- Header Pill -->
+    <rect x="1" y="1" width="158" height="30" rx="7" fill="#21262d" />
+    <circle cx="14" cy="16" r="4" fill="#39c5cf" />
+    <text x="24" y="20" fill="#f0f6fc" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="11" font-weight="700">4. PREACT WEBVIEW</text>
+
+    <!-- Components -->
+    <g transform="translate(10, 42)">
+      <rect width="140" height="34" rx="4" fill="#0d1117" stroke="#30363d" stroke-width="1" />
+      <text x="8" y="16" fill="#e6edf3" font-family="'SF Mono', monospace" font-size="10" font-weight="600">App.tsx</text>
+      <text x="8" y="28" fill="#8b949e" font-family="sans-serif" font-size="8.5">Preact Component tree</text>
+
+      <rect x="0" y="44" width="140" height="34" rx="4" fill="#0d1117" stroke="#30363d" stroke-width="1" />
+      <text x="8" y="60" fill="#e6edf3" font-family="'SF Mono', monospace" font-size="10" font-weight="600">draftReducer.ts</text>
+      <text x="8" y="72" fill="#8b949e" font-family="sans-serif" font-size="8.5">Optimistic local draft</text>
+
+      <rect x="0" y="88" width="140" height="34" rx="4" fill="#0d1117" stroke="#30363d" stroke-width="1" />
+      <text x="8" y="104" fill="#e6edf3" font-family="'SF Mono', monospace" font-size="10" font-weight="600">Strict CSP Nonce</text>
+      <text x="8" y="116" fill="#8b949e" font-family="sans-serif" font-size="8.5">Zero inline eval/styles</text>
+
+      <rect x="0" y="132" width="140" height="42" rx="4" fill="#0d1117" stroke="#1f6feb" stroke-width="0.8" />
+      <text x="8" y="148" fill="#58a6ff" font-family="'SF Mono', monospace" font-size="10" font-weight="600">14.1 KB Gzip</text>
+      <text x="8" y="162" fill="#8b949e" font-family="sans-serif" font-size="8.5">esbuild automatic JSX</text>
+    </g>
+  </g>
+</svg>
