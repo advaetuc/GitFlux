@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="https://raw.githubusercontent.com/advaetuc/GitFlux/main/docs/assets/hero-banner.svg" alt="GitFlux Banner" width="880" />
+<img src="https://raw.githubusercontent.com/advaetuc/GitFlux/main/docs/assets/hero-banner.png" alt="GitFlux Banner" width="880" />
 
 <br/>
 
@@ -53,7 +53,7 @@ GitFlux does not bypass any of these rules. Use it to record work you actually d
 ## Execution & Safety Pipeline
 
 <div align="center">
-  <img src="https://raw.githubusercontent.com/advaetuc/GitFlux/main/docs/assets/execution-pipeline.svg" alt="GitFlux Execution Pipeline" width="880" />
+  <img src="https://raw.githubusercontent.com/advaetuc/GitFlux/main/docs/assets/execution-pipeline.png" alt="GitFlux Execution Pipeline" width="880" />
 </div>
 
 GitFlux provides three flexible execution modes with robust rollback safeguards:
@@ -77,7 +77,7 @@ GitFlux provides three flexible execution modes with robust rollback safeguards:
 ## System Architecture
 
 <div align="center">
-  <img src="https://raw.githubusercontent.com/advaetuc/GitFlux/main/docs/assets/architecture-flow.svg" alt="GitFlux System Architecture" width="880" />
+  <img src="https://raw.githubusercontent.com/advaetuc/GitFlux/main/docs/assets/architecture-flow.png" alt="GitFlux System Architecture" width="880" />
 </div>
 
 GitFlux enforces strict 4-layer isolation boundaries per [AM-09 & Architecture Blueprint §5.2](docs/blueprint.md):
