@@ -25,6 +25,7 @@ export default tseslint.config(
       parserOptions: {
         project: ["tsconfig.json", "tsconfig.webview.json", "tsconfig.integration.json"],
         tsconfigRootDir: import.meta.dirname,
+        disallowAutomaticSingleRunInference: true,
       },
     },
   },

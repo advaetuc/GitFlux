@@ -1,11 +1,21 @@
+import * as path from "node:path";
 import { describe, it, expect } from "vitest";
 import { ESLint } from "eslint";
 
+// Ensure @typescript-eslint never infers single-run mode in test environments
+// where ESLint programmatic lintText() evaluates in-memory snippets.
+process.env.TSESTREE_SINGLE_RUN = "false";
+
 describe("Architecture Fitness Rules (AM-09 & Blueprint §5.2)", () => {
-  const eslint = new ESLint();
+  const projectRoot = path.resolve(__dirname, "../../");
+  const eslint = new ESLint({
+    cwd: projectRoot,
+    overrideConfigFile: path.resolve(projectRoot, "eslint.config.mjs"),
+  });
 
   async function lint(code: string, filePath: string) {
-    const results = await eslint.lintText(code, { filePath });
+    const resolvedPath = path.isAbsolute(filePath) ? filePath : path.resolve(projectRoot, filePath);
+    const results = await eslint.lintText(code, { filePath: resolvedPath });
     return results[0]?.messages ?? [];
   }
 
@@ -24,6 +34,11 @@ describe("Architecture Fitness Rules (AM-09 & Blueprint §5.2)", () => {
     it("blocks import from vscode", async () => {
       const messages = await lint('import "vscode";\n', "src/core/path.ts");
       assertRestrictedImport(messages, 'import "vscode" in src/core/path.ts');
+    });
+
+    it("blocks import from child_process in core", async () => {
+      const messages = await lint('import "child_process";\n', "src/core/path.ts");
+      assertRestrictedImport(messages, 'import "child_process" in src/core/path.ts');
     });
 
     it("blocks import from node:* built-in", async () => {
@@ -67,6 +82,11 @@ describe("Architecture Fitness Rules (AM-09 & Blueprint §5.2)", () => {
     it("blocks vscode imports", async () => {
       const messages = await lint('import "vscode";\n', "src/webview/main.tsx");
       assertRestrictedImport(messages, 'import "vscode" in src/webview/main.tsx');
+    });
+
+    it("blocks child_process in webview", async () => {
+      const messages = await lint('import "child_process";\n', "src/webview/main.tsx");
+      assertRestrictedImport(messages, 'import "child_process" in src/webview/main.tsx');
     });
 
     it("blocks node built-ins", async () => {
