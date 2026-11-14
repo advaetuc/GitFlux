@@ -2,7 +2,7 @@
 
 > **Last Updated:** November 2026  
 > **Extension ID:** `advaetuc.gitflux`  
-> **Version:** `0.1.0` (Production Release)  
+> **Version:** `0.2.2` (Production Release)  
 > **Marketplace:** [https://marketplace.visualstudio.com/items?itemName=advaetuc.gitflux](https://marketplace.visualstudio.com/items?itemName=advaetuc.gitflux)  
 > **Repository:** [https://github.com/advaetuc/GitFlux](https://github.com/advaetuc/GitFlux)
 
@@ -12,11 +12,11 @@
 
 GitFlux is a high-reliability, zero-runtime-dependency VS Code extension that enables developers to selectively stage files and commit them with custom author and committer dates without altering or committing other staged changes in the Git index.
 
-- **Current State:** v0.1.0 published on the Visual Studio Marketplace.
+- **Current State:** v0.2.2 published on the Visual Studio Marketplace.
 - **CI / Matrix Health:** 100% green workflows across Ubuntu Linux, macOS, and Windows.
-- **Test Metrics:** 339 passed unit & fixture tests; 90 passed shell-matrix hostile vector tests.
-- **Coverage:** **99.33%** line coverage across `src/core/**` (enforced minimum: 95%).
-- **Bundle Footprint:** `dist/extension.js` (~40 KB), `dist/webview/main.js` (~40 KB, 14.1 KB gzipped).
+- **Test Metrics:** 537 passed | 36 skipped across 26 test files (including 90 executed shell-matrix hostile vector tests).
+- **Coverage:** **99.40%** line coverage across `src/core/**` (enforced minimum: 95%).
+- **Bundle Footprint:** `dist/extension.js` (~42 KB), `dist/webview/main.js` (~44 KB, 15.8 KB gzip webview bundle).
 - **Runtime Dependencies:** Zero (`dependencies: {}`).
 
 ---
@@ -85,7 +85,7 @@ The repository maintains an authoritative set of markdown records under `docs/`:
 
 ---
 
-## 4. Completed v0.2.0 Deliverables
+## 4. Completed v0.2.0–v0.2.2 Deliverables
 
 - **Milestone A (Honest Positioning & Release Automation):**
   - Honest streak positioning and safety claims sections in `README.md`.
@@ -95,10 +95,12 @@ The repository maintains an authoritative set of markdown records under `docs/`:
   - Pure 12-week UTC heatmap core (`src/core/heatmap.ts`) and UTC day shift warning (`src/core/warnings.ts`).
   - Read-only Git activity service (`src/host/activity.ts`) with memoized caching.
   - Interactive Preact streak grid (`StreakGrid.tsx`) with zero-JS native `<details>` readiness checklist (`ReadinessChecklist.tsx`).
+- **Marketplace PNG Asset Renders (Gotcha 6):**
+  - `docs/assets/*.svg` are paired with 2x retina PNG renders (`1760×440`, `1760×480`, `1760×640`) generated via `@resvg/resvg-js` because the VS Code Marketplace rejects non-badge SVG references in `README.md`.
 
 ---
 
-## 5. Prioritized v0.2.1+ Roadmap
+## 5. Prioritized v0.2.3+ Roadmap
 
 For subsequent iterations and feature releases, prioritize work in this order:
 

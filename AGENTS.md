@@ -14,7 +14,7 @@ GitFlux/
 ├── .github/workflows/ci.yml       # Multi-platform CI (Ubuntu, macOS, Windows)
 ├── .vscode/                       # Launch configs & settings for F5 Extension Host debugging
 ├── docs/
-│   ├── assets/                    # Technical SVG diagrams (hero, arch, pipeline)
+│   ├── assets/                    # Technical SVG diagrams & 2x PNG Marketplace renders (hero, arch, pipeline)
 │   ├── blueprint.md               # Finalized Technical Architecture Blueprint (READ-ONLY)
 │   ├── amendments.md              # Ratified architectural amendments (AM-01 through AM-18)
 │   ├── deviations.md              # Formal deviation register (if any)
@@ -77,10 +77,10 @@ Always use these exact scripts. Do not introduce alternative build steps:
 | `npm run build` | Compiles extension and webview via `esbuild.mjs` | Generates `dist/extension.js` and `dist/webview/main.js` |
 | `npm run typecheck` | Validates TypeScript across Host, Webview, and Tests | Zero type errors across all tsconfigs |
 | `npm run lint` | Runs ESLint 9 flat config across `src/` and `test/` | Zero warnings and zero errors (`--max-warnings 0`) |
-| `npm test` | Runs full Vitest unit and fixture test suite | All 26 test files pass (532+ tests) |
+| `npm test` | Runs full Vitest unit and fixture test suite | All 26 test files pass (537+ tests) |
 | `npm run test:coverage` | Runs unit tests with v8 code coverage | `src/core/**` line coverage **≥ 95%** (currently 99.40%) |
 | `REQUIRE_SHELLS=bash,zsh,sh,fish,pwsh npm run test:shell` | Runs 18 hostile vectors on installed shells | 90 passed, 36 skipped on macOS/Linux |
-| `npm run package` | Builds and packages into production `.vsix` | Generates `gitflux-0.2.0.vsix` without git tags |
+| `npm run package` | Builds and packages into production `.vsix` | Generates `gitflux-0.2.2.vsix` without git tags |
 | `npx vsce ls` | Lists all files that will be packaged into the VSIX | Exactly **11 files** (manifest, license, readme, dist) |
 
 ---
@@ -110,9 +110,9 @@ Enforced automatically by `eslint.config.mjs` and tested by `test/unit/lint-fitn
 
 ---
 
-## 4. The 5 Critical Engineering Gotchas
+## 4. The 6 Critical Engineering Gotchas
 
-These five issues required deep architectural troubleshooting during v0.1.0 development. **Do not modify or refactor these patterns without reading this section:**
+These six issues required deep architectural troubleshooting during v0.1.0–v0.2.2 development. **Do not modify or refactor these patterns without reading this section:**
 
 ### Gotcha 1: `esbuild.mjs` Preact JSX Runtime
 - **The Issue:** If `webviewOptions` in `esbuild.mjs` omits explicit JSX configuration, esbuild defaults to standard React and emits `React.createElement(...)`. In the webview, `React` is not imported, throwing `ReferenceError: React is not defined` at runtime.
@@ -156,6 +156,10 @@ These five issues required deep architectural troubleshooting during v0.1.0 deve
 - **The Invariant:**
   - `CommitPanelProvider` in `src/host/panelProvider.ts` must queue `pendingPreselect` until the webview sends `{ type: "ready" }`.
   - The provider must maintain debounced (250ms) listeners on `repo.state.onDidChange`, `gitApi.onDidChangeState`, and `gitApi.onDidOpenRepository`.
+
+### Gotcha 6: VS Code Marketplace SVG Restriction in `README.md`
+- **The Issue:** The Visual Studio Code Marketplace sanitizes and rejects non-badge SVGs in extension `README.md` files for security reasons, causing broken image placeholders on marketplace item pages.
+- **The Invariant:** `README.md` must reference `.png` (not `.svg`) for custom banners and diagrams (`hero-banner.png`, `architecture-flow.png`, `execution-pipeline.png`). PNG renders must be generated from source SVGs at exact 2x `viewBox` aspect ratio (`1760×440`, `1760×480`, `1760×640`) via `@resvg/resvg-js` (never `qlmanage -t`, which forces a square 1:1 canvas with white padding).
 
 ---
 

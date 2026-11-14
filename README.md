@@ -116,7 +116,7 @@ code --install-extension advaetuc.gitflux
 ### Manual VSIX Installation
 Download the latest `.vsix` release from GitHub Releases and install via:
 ```bash
-code --install-extension gitflux-0.1.0.vsix
+code --install-extension gitflux-0.2.2.vsix
 ```
 
 ---
