@@ -20,6 +20,7 @@
 ---
 
 ## Why GitFlux?
+Missed a commit day on your GitHub streak—or forgot to commit before midnight? Use **GitFlux**.
 
 Committing with historical or adjusted timestamps in Git is traditionally error-prone: CLI environment variables (`GIT_AUTHOR_DATE`, `GIT_COMMITTER_DATE`) are clunky, GUI tools alter all staged files at once, and simple scripts risk corrupting your index or accidentally amending pushed history.
 
